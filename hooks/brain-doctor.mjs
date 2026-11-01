@@ -236,29 +236,40 @@ function checkPriming() {
   };
 }
 
-// Tracked on the hooks repo's `main`, but each platform branch keeps its own content. Deleting them
-// from `main` would delete a platform branch's copies on its next take of `main`, so they stay,
-// exempt from parity. Replaced by a skeleton-version check at knowledge-skeleton Stage 2.
-const PER_BRANCH_ON_MAIN = new Set([
-  "agent/claude/default/.claude/commands/brain-commits.md",
-  "agent/claude/default/.claude/commands/brain-sync.md",
-]);
-
 /**
- * The hooks repo's `main` holds only shared material, so every file it tracks must be identical on
- * the checked-out platform branch. A hook fix committed straight to a platform branch (7dc1b16) was
- * missing from `main` for weeks and nothing noticed. Read-only and local refs only:
- * no fetch, and the other OS's branch is never read.
+ * The engine runs from a knowledge-skeleton checkout: ~/.claude/hooks, the /brain skill and every
+ * brain-* command must resolve into the same one. A partial link (hooks repointed, commands left
+ * behind) runs new hooks with old instructions, and nothing else would notice. Read-only, local:
+ * no fetch. The version is the checkout's package.json; HEAD and dirty files say what is running.
  */
-function checkDotfilesParity() {
-  const repo = execFileSync("git", ["rev-parse", "--show-toplevel"], { cwd: realpathSync(HOOKS), encoding: "utf8", windowsHide: true }).trim();
-  const git = (...a) => execFileSync("git", a, { cwd: repo, encoding: "utf8", windowsHide: true }).split("\n").filter(Boolean);
-  const branch = git("rev-parse", "--abbrev-ref", "HEAD")[0];
-  const shared = new Set(git("ls-tree", "-r", "--name-only", "main").filter((f) => !PER_BRANCH_ON_MAIN.has(f)));
-  const differ = git("diff", "--name-only", "main", "HEAD").filter((f) => shared.has(f));
+function checkSkeletonVersion() {
+  const hooks = realpathSync(HOOKS);
+  const root = execFileSync("git", ["rev-parse", "--show-toplevel"], { cwd: hooks, encoding: "utf8", windowsHide: true }).trim();
+  const git = (...a) => execFileSync("git", a, { cwd: root, encoding: "utf8", windowsHide: true }).split("\n").filter(Boolean);
+  let pkg = {};
+  try {
+    pkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
+  } catch {}
+  const claude = join(homedir(), ".claude");
+  const inside = (link, target) => {
+    try {
+      return realpathSync(link) === realpathSync(target);
+    } catch {
+      return false;
+    }
+  };
+  const unlinked = [];
+  if (!inside(join(claude, "skills", "brain"), join(root, "skills", "brain"))) unlinked.push("skills/brain");
+  for (const f of existsSync(join(root, "commands")) ? readdirSync(join(root, "commands")) : [])
+    if (f.endsWith(".md") && !inside(join(claude, "commands", f), join(root, "commands", f))) unlinked.push(`commands/${f}`);
+  const isSkeleton = pkg.name === "knowledge-skeleton";
   return {
-    id: "dotfiles-parity", level: "fail", ok: !differ.length,
-    detail: { branch, shared: shared.size, differ: differ.length, samples: differ.slice(0, 8) },
+    id: "skeleton-version", level: "fail", ok: isSkeleton && !unlinked.length,
+    detail: {
+      root, version: pkg.version || null, head: git("rev-parse", "--short", "HEAD")[0],
+      dirty: git("status", "--porcelain").length, unlinked,
+      ...(isSkeleton ? {} : { problem: `${HOOKS} does not resolve into a knowledge-skeleton checkout` }),
+    },
   };
 }
 
@@ -334,7 +345,7 @@ function runChecks() {
       return { id: fn.name.replace(/^check/, "").toLowerCase(), level: "fail", ok: false, detail: { error: String(e?.message ?? e) } };
     }
   };
-  return [checkIndex, checkRetrieval, checkSessions, checkAuth, checkFrontmatter, checkLinks, checkReach, checkIgnores, checkCommits, checkPriming, checkGraphLinks, checkDotfilesParity, checkHygiene].map(guard);
+  return [checkIndex, checkRetrieval, checkSessions, checkAuth, checkFrontmatter, checkLinks, checkReach, checkIgnores, checkCommits, checkPriming, checkGraphLinks, checkSkeletonVersion, checkHygiene].map(guard);
 }
 
 // ---- repair (derived artifacts only) -------------------------------------------------------------
