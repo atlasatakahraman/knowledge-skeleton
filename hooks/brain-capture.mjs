@@ -96,13 +96,7 @@ try {
     } catch {
       /* no digest yet - stale stays true */
     }
-    if (stale) {
-      spawn("python", [join(VAULT, ".brain", "usage.py"), "--month", month], {
-        detached: true,
-        stdio: "ignore",
-        windowsHide: true,
-      }).unref();
-    }
+    if (stale) detach("brain_usage", join(HOOKS, "brain-usage.mjs"), "--month", month);
   }
 
   if (!tp || !sid) process.exit(0);
