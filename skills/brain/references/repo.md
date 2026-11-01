@@ -42,19 +42,14 @@ Rules in `80-Assets/00-MOC-Assets.md`.
 
 ## new — scaffolding an actual project
 
-Read `00-Meta/Hard-Rules.md` first, in full. It governs: bun (`bun --bun`), shadcn +
-unified `radix-ui` + Phosphor + `next-themes`, the Wayland guard for any cross-platform Tauri app,
-AAKNCL licensing, and **no tests until the completion gate**.
+Read `00-Meta/Hard-Rules.md` first, in full. It governs what a new project starts with: package
+manager, licence (the `LICENSE` file and every manifest's licence field), components, branching,
+and when tests and CI arrive.
 
-- `main` only. No feature branches.
-- `LICENSE.md` = AAKNCL v1.0, copied from `10-Repos/TheAtlas-Media/LICENSE.md`
-- `package.json` → `"license": "SEE LICENSE IN LICENSE.md"`
-- `CLAUDE.md` following TheAtlas-Media's section layout (see `00-Meta/Conventions.md`)
-- **No CI yet** — CI arrives at the completion gate, and only after `20-Knowledge/Tooling/ci-repair.md`
-  is done, or you inherit two broken workflows.
+- `CLAUDE.md` following the layout `00-Meta/Conventions.md` names.
+- Record the project's first decisions as ADRs in `60-Decisions/Repos/<Repo-Name>/`, not in the repo.
 
 ## edit
 
-- Flip `status: complete` **only** through the completion gate: I say it's done → you ask once →
-  scaffold CI + `bun test` (+ `cargo test`) → then flip.
-- Never ask about completion unprompted.
+- Flip `status: complete` only the way `00-Meta/Hard-Rules.md` describes, if it describes a
+  completion gate. Never ask about completion unprompted.

@@ -1,11 +1,12 @@
 ---
 name: brain
-description: Use when creating or editing anything in the second brain vault at C:\obsidian\root - a new folder or structure, a repo/project page, a documentation note, a slash command, a commit, a task or todo, a hook, a plan, or a decision (ADR), including promoting captured decisions from the ledger. Also use when asked to record a decision, log a session, or write something into the vault. Triggers on "/brain new", "/brain edit", "add this to the brain", "record this decision", "document this".
+description: Use when creating or editing anything in the second brain vault - a new folder or structure, a repo/project page, a documentation note, a slash command, a commit, a task or todo, a hook, a plan, or a decision (ADR), including promoting captured decisions from the ledger. Also use when asked to record a decision, log a session, or write something into the vault. Triggers on "/brain new", "/brain edit", "add this to the brain", "record this decision", "document this".
 ---
 
 # brain
 
-Router for writing to the second brain at `C:\obsidian\root`.
+Router for writing to the second brain. Its path is `vault` in the machine's config:
+`bun --bun ~/.claude/hooks/skeleton-config.mjs vault`.
 
 ```
 /brain new  <kind> [name]
@@ -14,12 +15,12 @@ Router for writing to the second brain at `C:\obsidian\root`.
 
 ## Before writing anything
 
-1. Read `C:\obsidian\root\00-Meta\Conventions.md` — frontmatter schema, naming, where things live.
-2. Read `00-Meta\Hard-Rules.md` if the change touches code, deps, components, or licensing.
+1. Read `00-Meta/Conventions.md` — frontmatter schema, naming, where things live.
+2. Read `00-Meta/Hard-Rules.md` if the change touches code, deps, components, or licensing.
 3. Check the target doesn't already exist: `ctx_search`, or `graphify query`.
 
 **Never duplicate a repo's own docs into the vault.** A repo's `docs/` *is* its documentation;
-vault pages link inward. `agents-doc-drift.yml` in TheAtlas-Media depends on this.
+vault pages link inward.
 
 ## Kinds
 
@@ -45,4 +46,4 @@ If the kind is ambiguous, ask — do not guess between `docs` and `repo`.
 - Wikilinks `[[name]]` for cross-references. A markdown path link is invisible to the graph.
 - Link the new note from its folder MOC, or it is unreachable at retrieval tier 1.
 - After a batch of changes, `bun --bun ~/.claude/hooks/brain-graph.mjs` in the vault — free, AST only; not a bare `graphify update .`, which drops cross-folder links.
-- Commit on `main`. **No feature or chore branches** (`00-Meta/Hard-Rules.md`).
+- Commit the way `00-Meta/Hard-Rules.md` says to branch and commit.

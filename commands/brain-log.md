@@ -4,7 +4,8 @@ description: Write today's session note into the brain's 30-Sessions/
 
 Write or append to `30-Sessions/YYYY/MM/YYYY-MM-DD.md`.
 
-**Rollover is 05:00 TST.** A session that started at 02:00 belongs to the *previous* day's note.
+**Rollover is `rolloverHour` local time** (`bun --bun ~/.claude/hooks/skeleton-config.mjs rolloverHour`,
+default 5). With the default, a session that started at 02:00 belongs to the *previous* day's note.
 Compute the date accordingly rather than using today's date blindly.
 
 Frontmatter if creating: `type: session`, `project: brain`, `status: active`, `created`/`updated`.
@@ -19,5 +20,5 @@ Capture, in this order:
 Keep it terse and factual. This is a log, not a narrative — no summary of the conversation, no
 restating what the code does.
 
-If a decision here deserves to outlive the session, promote it: an ADR in the repo's `Decisions/`,
-or a note in `20-Knowledge/`. Link to it from the session note rather than duplicating it.
+If a decision here deserves to outlive the session, promote it: an ADR in `60-Decisions/`
+(`/brain new decision`), or a note in `20-Knowledge/`. Link to it from the session note rather than duplicating it.

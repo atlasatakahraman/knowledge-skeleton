@@ -5,10 +5,11 @@ Uses the `obsidian-tasks-plugin` format already installed in the vault. Do not i
 ## new
 
 Tasks live in today's daily note, `30-Sessions/YYYY/MM/YYYY-MM-DD.md`.
-**Rollover is 05:00 TST** — a session starting 02:00 belongs to the previous day's note.
+**Rollover is `rolloverHour` local time** (config, default 5) — with the default, a session starting
+02:00 belongs to the previous day's note.
 
 ```markdown
-- [ ] Fix the labeler.yml v5 schema [[theatlas-media]] 📅 2026-08-22 ⏫
+- [ ] Fix the labeler.yml v5 schema [[my-app]] 📅 2026-08-22 ⏫
 ```
 
 - `[[wikilink]]` the repo or note it belongs to — that is what makes it findable later
