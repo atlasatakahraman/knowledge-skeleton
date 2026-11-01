@@ -1,0 +1,8 @@
+{
+  "name": "knowledge-skeleton",
+  "version": "0.1.0",
+  "description": "Hooks, skill and commands that turn an Obsidian vault into Claude Code's long-term memory",
+  "license": "GPL-3.0-only",
+  "private": true,
+  "type": "module"
+}

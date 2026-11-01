@@ -1,0 +1,12 @@
+# Per-machine and runtime files inside hooks/. ~/.claude/hooks points at hooks/, so anything a hook
+# or a plugin writes "beside the hooks" lands here.
+hooks/.state/
+hooks/.remember/
+hooks/.statusline-cache.json
+# Legacy per-machine paths; replaced by ~/.config/knowledge/config.json (skeleton-config.mjs).
+hooks/brain-paths.mjs
+# Deployed by the context-mode plugin into ~/.claude/hooks. Elastic-2.0, not ours to ship.
+hooks/context-mode-cache-heal.mjs
+
+node_modules/
+package-lock.json
