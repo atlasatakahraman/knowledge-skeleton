@@ -103,7 +103,7 @@ function pinCheck() {
   if (!pin || !version || compareVersions(version, pin) === 0) return null;
   return compareVersions(version, pin) < 0
     ? `!! SKELETON ${version} is behind the vault's pin ${pin}: \`git -C ${root} pull --ff-only\`.`
-    : `!! SKELETON ${version} is ahead of the vault's pin ${pin}: read its changes since ${pin} (\`git -C ${root} log\`), adapt the vault, then set ${PIN_FILE} to ${version} and commit it.`;
+    : `!! SKELETON ${version} is ahead of the vault's pin ${pin}: read its changes since ${pin} (\`git -C ${root} log v${pin}..\`), adapt the vault, then set ${PIN_FILE} to ${version} and commit it.`;
 }
 
 const STALE_DAYS = 3; // slack for a weekend off, tight enough to catch a real break early
