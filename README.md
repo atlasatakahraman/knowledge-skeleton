@@ -81,6 +81,8 @@ Installed from their own upstreams, never vendored here:
   and serves it over MCP.
 - [context-mode](https://github.com/mksglu/context-mode) - Elastic License 2.0. Full-text index and
   sandboxed tools. The hooks degrade without it; the doctor's index and retrieval checks need it.
+- [gitleaks](https://github.com/gitleaks/gitleaks) - MIT. Scans the records before they are
+  committed and pushed. Without it, no records are committed.
 
 ## License
 

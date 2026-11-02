@@ -94,6 +94,7 @@ maintenance.
 | `!! VAULT PULL skipped: …` | The vault has uncommitted changes, or cannot fast-forward | Commit or stash, then `git pull --ff-only` |
 | `!! SKELETON PULL skipped: …` (or `failed`) | The skeleton checkout has uncommitted changes, or cannot fast-forward | Commit or stash there, then `git pull --ff-only` |
 | `!! RECORDS committed but not pushed` | You have unpushed commits of your own; a push would send them too | Push when they are ready; the records go with them |
+| `!! RECORDS not committed: gitleaks is not on PATH …` | Records are never committed unscanned | Install gitleaks (`INSTALL.md` § Prerequisites), then restart Claude Code so the hooks see the new `PATH` |
 | `!! BRAIN RECORDS FAILING since …` | The records commit or push failed: offline, a gitleaks finding, a rebase conflict | Follow the reason; `bun --bun ~/.claude/hooks/brain-records.mjs` retries |
 | `!! SKELETON x is behind the vault's pin y` | Another machine moved the vault to a newer skeleton; this one has not pulled it | `git -C <skeleton> pull --ff-only` |
 | `!! SKELETON x is ahead of the vault's pin y` | The skeleton moved on; the vault is still written for the older one | Read the skeleton's changes since `y` (`git -C <skeleton> log vy..`), adapt the vault, then set `.skeleton.json` to `x` and commit it |

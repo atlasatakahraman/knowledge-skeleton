@@ -12,7 +12,8 @@ bun ~/dev/knowledge-skeleton/install.ts              # do it
 
 ```powershell
 git clone https://github.com/atlasatakahraman/knowledge-skeleton C:\dev\knowledge-skeleton
-bun C:\dev\knowledge-skeleton\install.ts --vault C:\obsidian\root --dev C:\dev
+bun C:\dev\knowledge-skeleton\install.ts --dry-run    # what it would do
+bun C:\dev\knowledge-skeleton\install.ts              # do it
 ```
 
 | Flag | Default | |
@@ -43,7 +44,9 @@ checkout, `<vault>` the vault, `<dev>` the checkouts folder.
 
 ### 1. Prerequisites
 
-`bun`, `git`, `uv` (for graphify) and `claude` (Claude Code), all on `PATH`.
+`bun`, `git`, `uv` (for graphify), `claude` (Claude Code) and `gitleaks`, all on `PATH`. The hooks
+commit and push their records on their own and scan them with gitleaks first. Without it they
+commit nothing.
 
 | Tool | Linux | Windows |
 |---|---|---|
@@ -51,6 +54,7 @@ checkout, `<vault>` the vault, `<dev>` the checkouts folder.
 | git | your package manager (`pacman -S git`, `apt install git`) | `winget install Git.Git` |
 | uv | `curl -LsSf https://astral.sh/uv/install.sh \| sh` | `powershell -c "irm https://astral.sh/uv/install.ps1 \| iex"` |
 | claude | `curl -fsSL https://claude.ai/install.sh \| bash` | `irm https://claude.ai/install.ps1 \| iex` |
+| gitleaks | your package manager (`pacman -S gitleaks`, `brew install gitleaks`) | `winget install Gitleaks.Gitleaks` |
 
 `CLAUDE_CONFIG_DIR` must be unset: the hooks read `~/.claude`.
 
