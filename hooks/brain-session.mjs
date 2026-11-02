@@ -8,12 +8,12 @@
 //
 // Runtime is bun (`bun --bun`), per 00-Meta/Hard-Rules.
 import { readFileSync, existsSync, readdirSync, statSync, openSync, readSync, closeSync } from "node:fs";
-import { join } from "node:path";
+import { join, basename } from "node:path";
 import { release } from "node:os";
 import { spawn, spawnSync } from "node:child_process";
 import {
   VAULT, DEV_ROOT, HOOKS, sessionDbs, failures, HOOK_EVENTS, ledgerRead, logicalDate, FOLDERS, CONFIG,
-  PIN_FILE, skeletonPin, compareVersions,
+  PIN_FILE, skeletonPin, compareVersions, withLock,
 } from "./brain-lib.mjs";
 
 /**
@@ -45,8 +45,11 @@ function machine() {
 
 /**
  * Fast-forward one checkout from its upstream: clean tree only (untracked files never block a
- * fast-forward), pull only - pushing stays the user's call. `{ skipped }`, `{ failed }`, or the
- * commit count and the `git` runner for a follow-up question about the pulled range.
+ * fast-forward), pull only - pushing stays the user's call. `{ busy }`, `{ skipped }`, `{ failed }`,
+ * or the commit count and the `git` runner for a follow-up question about the pulled range.
+ * Fetch, then merge the upstream ref, under a lock: two sessions starting together each ran
+ * `git pull`, and the two fetches left FETCH_HEAD with two merge lines (2026-11-02). Busy means
+ * the other session is pulling this checkout right now; it reports.
  */
 function ffPull(cwd) {
   const git = (...a) =>
@@ -54,11 +57,16 @@ function ffPull(cwd) {
       cwd, encoding: "utf8", windowsHide: true, timeout: 8_000,
       env: { ...process.env, GIT_TERMINAL_PROMPT: "0" },
     });
-  if (git("status", "--porcelain", "--untracked-files=no").stdout?.trim()) return { skipped: true };
-  const before = git("rev-parse", "HEAD").stdout?.trim();
-  const r = git("pull", "--ff-only", "--quiet");
-  if (r.status !== 0) return { failed: (r.stderr || r.error?.message || "timeout").trim().split("\n")[0] };
-  return { n: Number(git("rev-list", "--count", `${before}..HEAD`).stdout?.trim() || 0), before, git };
+  const why = (r) => (r.stderr || r.error?.message || "timeout").trim().split("\n")[0];
+  return withLock(`pull-${basename(cwd)}`, () => {
+    if (git("status", "--porcelain", "--untracked-files=no").stdout?.trim()) return { skipped: true };
+    const before = git("rev-parse", "HEAD").stdout?.trim();
+    const f = git("fetch", "--quiet");
+    if (f.status !== 0) return { failed: why(f) };
+    const m = git("merge", "--ff-only", "--quiet", "@{u}");
+    if (m.status !== 0) return { failed: why(m) };
+    return { n: Number(git("rev-list", "--count", `${before}..HEAD`).stdout?.trim() || 0), before, git };
+  }, 60_000) ?? { busy: true };
 }
 
 /**
@@ -69,6 +77,7 @@ function ffPull(cwd) {
 function vaultPull() {
   if (process.env.CLAUDE_INVOKED_BY || process.argv.includes("--dry")) return null;
   const r = ffPull(VAULT);
+  if (r.busy) return null;
   if (r.skipped) return "!! VAULT PULL skipped: uncommitted changes. Commit or stash, then `git pull --ff-only`.";
   if (r.failed) return `!! VAULT PULL failed: ${r.failed}. Pull by hand before editing.`;
   if (!r.n) return null;
@@ -87,6 +96,7 @@ function skeletonPull() {
   const root = skeletonPin().root;
   if (spawnSync("git", ["symbolic-ref", "-q", "HEAD"], { cwd: root, windowsHide: true }).status !== 0) return null;
   const r = ffPull(root);
+  if (r.busy) return null;
   if (r.skipped) return `!! SKELETON PULL skipped: uncommitted changes in ${root}.`;
   if (r.failed) return `!! SKELETON PULL failed: ${r.failed}. Pull ${root} by hand.`;
   if (!r.n) return null;

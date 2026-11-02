@@ -1,7 +1,7 @@
 // brain-lib.mjs - shared helpers for the brain memory hooks.
 // Runtime is bun (`bun --bun`), per 00-Meta/Hard-Rules.
 // Spec: [[2026-08-22-brain-memory-compiler]] (vault plan).
-import { readFileSync, existsSync, mkdirSync, writeFileSync, readdirSync, appendFileSync, statSync, copyFileSync, realpathSync } from "node:fs";
+import { readFileSync, existsSync, mkdirSync, writeFileSync, readdirSync, appendFileSync, statSync, copyFileSync, realpathSync, openSync, closeSync, rmSync } from "node:fs";
 import { join, dirname, basename, relative } from "node:path";
 import { homedir, tmpdir } from "node:os";
 import { execFileSync } from "node:child_process";
@@ -306,6 +306,33 @@ export function logEvent(e) {
   try {
     appendFileSync(HOOK_EVENTS, `${JSON.stringify({ ts: new Date().toISOString(), ...e })}\n`);
   } catch {}
+}
+
+/**
+ * Run `fn` holding an exclusive lock in STATE_DIR; `null` when another process holds it. The create
+ * is the check, so two sessions that start at once cannot both enter: two concurrent `git pull`s
+ * left FETCH_HEAD with two merge lines and failed "Cannot fast-forward to multiple branches"
+ * (2026-11-02). A lock older than `staleMs` belongs to a dead process and is taken over.
+ */
+export function withLock(name, fn, staleMs = 300_000) {
+  const lock = join(STATE_DIR, `${name}.lock`);
+  mkdirSync(STATE_DIR, { recursive: true });
+  try {
+    closeSync(openSync(lock, "wx"));
+  } catch {
+    try {
+      if (Date.now() - statSync(lock).mtimeMs < staleMs) return null;
+      rmSync(lock, { force: true });
+      closeSync(openSync(lock, "wx"));
+    } catch {
+      return null;
+    }
+  }
+  try {
+    return fn();
+  } finally {
+    try { rmSync(lock, { force: true }); } catch {}
+  }
 }
 
 const WATERMARKS = join(STATE_DIR, "flush-watermarks.json");
