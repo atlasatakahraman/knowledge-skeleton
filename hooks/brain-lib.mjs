@@ -355,7 +355,8 @@ export const isRecordPath = (f) => RECORD_PATHS.some((p) => f === p || f.startsW
  * start (owner, 2026-11-02). The last flush runs at SessionEnd, after the user's last commit, so
  * without this the session's own record never left the machine that ran it.
  * - Commits RECORD_PATHS only, and nothing at all when the user has other changes staged.
- * - gitleaks scans the staged records when it is installed; a finding commits nothing.
+ * - gitleaks scans the staged records; a finding commits nothing, and so does a missing gitleaks:
+ *   records push on their own, so an unscanned commit would reach origin with nobody looking.
  * - Pushes only when every unpushed commit is a record: a push sends the user's unpushed work too,
  *   and pushing that is theirs to decide. `held` says so.
  * - Behind origin, it rebases first. The records merge by union (.gitattributes), so two boots
@@ -387,7 +388,11 @@ export function syncRecords() {
       const leak = spawnSync("gitleaks", ["git", "--pre-commit", "--staged", "--no-banner", "-l", "warn"], {
         cwd: VAULT, encoding: "utf8", windowsHide: true, timeout: 60_000,
       });
-      if (leak.error?.code !== "ENOENT" && leak.status !== 0) {
+      if (leak.error?.code === "ENOENT") {
+        git("reset", "-q", "--", ...paths);
+        return { ...res, committed: 0, skipped: "gitleaks not installed" };
+      }
+      if (leak.status !== 0) {
         git("reset", "-q", "--", ...paths);
         return { ...res, committed: 0, failed: "gitleaks flagged the staged records; nothing committed" };
       }

@@ -84,6 +84,7 @@ function recordsSync() {
   if (!r.busy) clearFailure("records");
   if (r.held) return `!! RECORDS committed but not pushed: ${VAULT} has your own unpushed commits, and a push sends both. Push when they are ready.`;
   if (r.skipped === "other changes are staged") return "!! RECORDS not committed: other changes are staged in the vault.";
+  if (r.skipped === "gitleaks not installed") return "!! RECORDS not committed: gitleaks is not on PATH, and records are never pushed unscanned. Install it (see INSTALL.md § Prerequisites), restart Claude Code.";
   if (r.pushed) return `Records from an earlier session committed and pushed (${r.committed} file${r.committed === 1 ? "" : "s"}).`;
   return null;
 }
