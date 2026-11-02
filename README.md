@@ -11,15 +11,25 @@ skills/brain/                 /brain new|edit <kind> - writes notes in the vault
 commands/       brain-*.md    /brain-commits /brain-log /brain-sync /brain-usage
 template/                     the empty vault: folders, MOCs, conventions, system docs, Identity and
                               Hard-Rules stubs (`FILL:` marks each placeholder)
+install.ts                    sets a machine up: prerequisites, graphify, context-mode, vault, config,
+                              links, hook block, CLAUDE.md imports, first index and graph
+INSTALL.md                    the same steps by hand, for a person or an agent
+settings.hooks.json           the hook block install.ts merges into ~/.claude/settings.json
 ```
 
-## Starting a vault from the template
+## Install
 
 ```bash
-cp -r ~/dev/knowledge-skeleton/template ~/knowledge && git -C ~/knowledge init
+git clone https://github.com/atlasatakahraman/knowledge-skeleton ~/dev/knowledge-skeleton
+bun ~/dev/knowledge-skeleton/install.ts --dry-run && bun ~/dev/knowledge-skeleton/install.ts
 ```
 
-Then fill `00-Meta/Identity.md` and `00-Meta/Hard-Rules.md` (`grep -rn "FILL:" ~/knowledge/00-Meta`
+A new vault comes from `template/` at `~/knowledge`; an existing one is adopted. Safe to run again:
+a step that is done reports `ok`. Flags, Windows, and every step by hand: [INSTALL.md](INSTALL.md).
+
+## After a new vault
+
+Fill `00-Meta/Identity.md` and `00-Meta/Hard-Rules.md` (`grep -rn "FILL:" ~/knowledge/00-Meta`
 lists what is left) and replace the questions in `00-Meta/retrieval-cases.json` with ones the vault
 must always answer: `brain-doctor`'s `retrieval` check runs them. The template's own `README.md`
 has the rest.
@@ -42,31 +52,14 @@ The hooks read their paths from one untracked file, written once per machine:
 ```
 
 `vault` and `devRoot` are required. `rolloverHour` (default 5) is when a daily note starts, local
-time. Check what the hooks see with `bun --bun hooks/skeleton-config.mjs`.
-
-## Linking into Claude Code
-
-```bash
-ln -s ~/dev/knowledge-skeleton/hooks ~/.claude/hooks
-ln -s ~/dev/knowledge-skeleton/skills/brain ~/.claude/skills/brain
-mkdir -p ~/.claude/commands && ln -s ~/dev/knowledge-skeleton/commands/brain-*.md ~/.claude/commands/
-```
-
-```powershell
-New-Item -ItemType SymbolicLink -Path $HOME\.claude\hooks -Target C:\dev\knowledge-skeleton\hooks
-New-Item -ItemType SymbolicLink -Path $HOME\.claude\skills\brain -Target C:\dev\knowledge-skeleton\skills\brain
-Get-ChildItem C:\dev\knowledge-skeleton\commands\brain-*.md | ForEach-Object {
-  New-Item -ItemType SymbolicLink -Path "$HOME\.claude\commands\$($_.Name)" -Target $_.FullName }
-```
-
-Then register the hooks in `~/.claude/settings.json`. An installer that does all of this is on the
-way; until then `bun --bun hooks/brain-doctor.mjs --pretty` says what is missing.
+time. `install.ts` writes it. Check what the hooks see with `bun --bun hooks/skeleton-config.mjs`.
 
 ## Third-party tools
 
 Installed from their own upstreams, never vendored here:
 
-- [graphify](https://github.com/safishamsi/graphify) (`graphifyy` on PyPI) - MIT. Builds the link graph.
+- [graphify](https://github.com/safishamsi/graphify) (`graphifyy[mcp]` on PyPI) - MIT. Builds the link graph
+  and serves it over MCP.
 - [context-mode](https://github.com/mksglu/context-mode) - Elastic License 2.0. Full-text index and
   sandboxed tools. The hooks degrade without it; the doctor's index and retrieval checks need it.
 

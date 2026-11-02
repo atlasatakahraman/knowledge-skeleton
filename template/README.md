@@ -96,5 +96,5 @@ maintenance.
 | `brain-doctor` FAIL in `links` | A `[[link]]` resolves to nothing | Fix it, or list it in `00-Meta/Forward-Links.md` |
 | `brain-doctor` FAIL in `reach` | A note more than 2 hops from the root MOC (a record, 3) | Link it from its folder's MOC |
 | `brain-doctor` FAIL in `commits` | A commit from the last 3 days has no note | `brain-commit.mjs --backfill <date>` |
-| `brain-doctor` FAIL in `skeleton-version` | `~/.claude/hooks`, the skill or a command does not point into one knowledge-skeleton checkout | Re-run the link step of the skeleton's `INSTALL.md` |
+| `brain-doctor` FAIL in `skeleton-version` | `~/.claude/hooks`, the skill or a command does not point into one knowledge-skeleton checkout | Re-run the skeleton's `install.ts` (or step 4 of its `INSTALL.md`) |
 | The graph shrank | A rename or an ignore rule dropped files | [Conventions](00-Meta/Conventions.md) § Renaming; `brain-graph.mjs --force` |
