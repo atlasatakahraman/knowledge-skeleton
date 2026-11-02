@@ -9,11 +9,12 @@
 //   ... --dry-run                        say what each step would do, change nothing
 //
 // Safe to run twice: every step checks before it writes, and a second run reports `ok` for each.
-// It never deletes: a real ~/.claude/hooks directory, a file where a link belongs, and settings.json
-// before a change are kept beside the original as `<name>.pre-skeleton-<stamp>`.
+// It never deletes: a real ~/.claude/hooks directory or a file where a link belongs moves to
+// ~/.claude/.pre-skeleton-<stamp>/<same path>, and settings.json before a change is kept beside
+// the original as `settings.json.pre-skeleton-<stamp>`.
 // It installs graphify and context-mode when missing and never updates either: updates are opt-in.
 import { cpSync, existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, realpathSync, renameSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { dirname, join, relative, resolve } from "node:path";
 import { homedir } from "node:os";
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -73,9 +74,12 @@ const readJson = (file: string) => {
     return null;
   }
 };
-/** Move a real file or directory out of the way, never delete it. */
+/** Move a real file or directory out of the way, never delete it. Outside skills/ and commands/:
+ * Claude Code loads every directory in skills/, so a backup kept beside the original would load
+ * as a second skill of the same name. */
 const keepAside = (path: string) => {
-  const to = `${path}.pre-skeleton-${STAMP}`;
+  const to = join(CLAUDE, `.pre-skeleton-${STAMP}`, relative(CLAUDE, path));
+  mkdirSync(dirname(to), { recursive: true });
   renameSync(path, to);
   return to;
 };
