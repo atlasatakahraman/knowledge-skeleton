@@ -5,6 +5,7 @@
 //   ... --pretty                                          table, for a human
 //   ... --repair                                          idempotent repairs, then check
 //   ... --record                                          write today's line to 50-Ops/Health/
+//   ... --only frontmatter,links,reach                    run just these checks (a template copy, an installer step)
 //
 // Every failure of this system so far was SILENT - the retrieval hook never returned a vault note
 // for as long as it existed, and nothing noticed. Each check below exists because of one.
@@ -27,18 +28,17 @@ import {
 const pretty = process.argv.includes("--pretty");
 const repair = process.argv.includes("--repair");
 const record = process.argv.includes("--record");
+const onlyAt = process.argv.indexOf("--only");
+const only = onlyAt === -1 ? null : new Set((process.argv[onlyAt + 1] || "").split(",").filter(Boolean));
 const FLOOR = -6; // must match brain-inject: a hit it would not show is a miss here too
 const GRACE_MS = 10 * 60_000; // brain-reindex is debounced; a note written a minute ago is fine
 
-/** Ground truth. Keyed by basename, so moves cannot break it; a failing case means retrieval broke. */
-const CASES = [
-  ["Wayland compositing guard WEBKIT_DISABLE_COMPOSITING_MODE", "wayland-compositing-guard"],
-  ["bunx never bare bunx node shebang", "Hard-Rules"],
-  ["GPL AAKCL withdrawn commercial", "0031-gpl-3-only-aakcl-withdrawn"],
-  ["retrieval protocol tiers ctx_search graphify", "Retrieval-Protocol"],
-  ["one binary not four windows", "0002-one-binary-not-four"],
-  ["frontmatter schema naming conventions wikilinks", "Conventions"],
-];
+/**
+ * Ground truth, owned by the vault: [{ "query": "...", "note": "<basename>" }]. Keyed by basename,
+ * so moves cannot break it; a failing case means retrieval broke. The template ships cases against
+ * its own notes; a vault replaces them with questions it must always answer.
+ */
+const CASES_FILE = join(VAULT, FOLDERS.meta, "retrieval-cases.json");
 
 // ---- the vault on disk (walk, links, frontmatter: shared with brain-reindex, in brain-lib) -------
 
@@ -91,12 +91,20 @@ function checkIndex({ notes }) {
 }
 
 function checkRetrieval() {
+  let cases;
+  try {
+    cases = JSON.parse(readFileSync(CASES_FILE, "utf8"));
+  } catch (e) {
+    return { id: "retrieval", level: "fail", ok: false, detail: { reason: `${rel(CASES_FILE)}: ${e.code === "ENOENT" ? "missing" : e.message}` } };
+  }
+  if (!Array.isArray(cases) || !cases.length || !cases.every((c) => c?.query && c?.note))
+    return { id: "retrieval", level: "fail", ok: false, detail: { reason: `${rel(CASES_FILE)}: want a non-empty array of {"query", "note"}` } };
   const failed = [];
-  for (const [q, want] of CASES) {
+  for (const { query: q, note: want } of cases) {
     const got = vaultSearch(ftsMatch(q)).rows.filter((r) => r.rank < FLOOR).map((r) => basename(String(r.path), ".md"));
     if (!got.includes(want)) failed.push({ q, want, got: [...new Set(got)].slice(0, 4) });
   }
-  return { id: "retrieval", level: "fail", ok: !failed.length, detail: { passed: CASES.length - failed.length, total: CASES.length, failed } };
+  return { id: "retrieval", level: "fail", ok: !failed.length, detail: { passed: cases.length - failed.length, total: cases.length, failed } };
 }
 
 /**
@@ -336,16 +344,34 @@ function checkHygiene() {
   return { id: "hygiene", level: "warn", ok, detail: out };
 }
 
+const CHECKS = {
+  "vault-index": checkIndex, retrieval: checkRetrieval, sessions: checkSessions, auth: checkAuth,
+  frontmatter: checkFrontmatter, links: checkLinks, reach: checkReach, ignores: checkIgnores,
+  commits: checkCommits, priming: checkPriming, "graph-links": checkGraphLinks,
+  "skeleton-version": checkSkeletonVersion, hygiene: checkHygiene,
+};
+if (only) {
+  const unknown = [...only].filter((id) => !(id in CHECKS));
+  if (!only.size || unknown.length) {
+    process.stderr.write(`--only wants check ids from: ${Object.keys(CHECKS).join(", ")}${unknown.length ? ` (unknown: ${unknown.join(", ")})` : ""}\n`);
+    process.exit(1);
+  }
+  if (record) {
+    process.stderr.write("--only and --record do not mix: a health line must cover every check\n");
+    process.exit(1);
+  }
+}
+
 function runChecks() {
   const vault = walk();
-  const guard = (fn) => {
+  const guard = ([id, fn]) => {
     try {
       return fn(vault);
     } catch (e) {
-      return { id: fn.name.replace(/^check/, "").toLowerCase(), level: "fail", ok: false, detail: { error: String(e?.message ?? e) } };
+      return { id, level: "fail", ok: false, detail: { error: String(e?.message ?? e) } };
     }
   };
-  return [checkIndex, checkRetrieval, checkSessions, checkAuth, checkFrontmatter, checkLinks, checkReach, checkIgnores, checkCommits, checkPriming, checkGraphLinks, checkSkeletonVersion, checkHygiene].map(guard);
+  return Object.entries(CHECKS).filter(([id]) => !only || only.has(id)).map(guard);
 }
 
 // ---- repair (derived artifacts only) -------------------------------------------------------------
