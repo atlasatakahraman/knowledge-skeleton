@@ -1,7 +1,7 @@
 // brain-lib.mjs - shared helpers for the brain memory hooks.
 // Runtime is bun (`bun --bun`), per 00-Meta/Hard-Rules.
 // Spec: [[2026-08-22-brain-memory-compiler]] (vault plan).
-import { readFileSync, existsSync, mkdirSync, writeFileSync, readdirSync, appendFileSync, statSync, copyFileSync } from "node:fs";
+import { readFileSync, existsSync, mkdirSync, writeFileSync, readdirSync, appendFileSync, statSync, copyFileSync, realpathSync } from "node:fs";
 import { join, dirname, basename, relative } from "node:path";
 import { homedir, tmpdir } from "node:os";
 import { execFileSync } from "node:child_process";
@@ -86,6 +86,39 @@ export const IS_WINDOWS = process.platform === "win32";
  * boot says which side it was true on ([[0045-cross-os-vault-sync-and-os-stamps]]).
  */
 export const OS_TAG = CONFIG.os;
+
+/**
+ * The engine version the vault is written for, and the one running. `.skeleton.json` at the vault
+ * root pins a skeleton version; the checkout `~/.claude/hooks` resolves into has its own in
+ * package.json. Two machines on one vault drift apart when one pulls the skeleton and the other
+ * does not, and a vault edited for one engine is read by the other with the wrong rules - nothing
+ * else notices. brain-session prints a mismatch, brain-doctor's `skeleton-version` fails on it.
+ * No pin means no check: a vault opts in by committing the file.
+ */
+export const PIN_FILE = join(VAULT, ".skeleton.json");
+
+export function skeletonPin() {
+  const json = (f) => {
+    try {
+      return JSON.parse(readFileSync(f, "utf8"));
+    } catch {
+      return null;
+    }
+  };
+  const root = dirname(realpathSync(HOOKS));
+  const pkg = json(join(root, "package.json")) ?? {};
+  return { root, name: pkg.name ?? null, version: pkg.version ?? null, pin: json(PIN_FILE)?.version ?? null };
+}
+
+/** -1, 0 or 1 for two dotted versions, numerically per part ("0.10.0" is after "0.9.1"). */
+export function compareVersions(a, b) {
+  const pa = String(a).split("."), pb = String(b).split(".");
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+    const d = (Number.parseInt(pa[i], 10) || 0) - (Number.parseInt(pb[i], 10) || 0);
+    if (d) return Math.sign(d);
+  }
+  return 0;
+}
 
 /**
  * A path in comparable form. Windows paths arrive with mixed separators and are

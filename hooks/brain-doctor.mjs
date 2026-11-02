@@ -21,7 +21,7 @@ import {
   VAULT, DEV_ROOT, HOOKS, VAULT_LIKE, HOOK_EVENTS, FOLDERS,
   openDb, ftsMatch, vaultSearch, failures, logicalDate, notePath,
   repoList, recentCommits, recordedCommits, unrecorded, indexVault, pruneVaultIndex,
-  rebuildGraph, missingLinkEdges, wikilinkPairs, MERGED_GRAPH,
+  rebuildGraph, missingLinkEdges, wikilinkPairs, MERGED_GRAPH, skeletonPin, PIN_FILE,
   NOTE_EXEMPT as EXEMPT, walkVault as walk, linksOf, frontmatterOk, forwardLinks, brokenLinksIn,
 } from "./brain-lib.mjs";
 
@@ -249,6 +249,7 @@ function checkPriming() {
  * brain-* command must resolve into the same one. A partial link (hooks repointed, commands left
  * behind) runs new hooks with old instructions, and nothing else would notice. Read-only, local:
  * no fetch. The version is the checkout's package.json; HEAD and dirty files say what is running.
+ * A vault that pins a version in `.skeleton.json` fails on any other: it was written for that engine.
  */
 function checkSkeletonVersion() {
   const hooks = realpathSync(HOOKS);
@@ -271,12 +272,15 @@ function checkSkeletonVersion() {
   for (const f of existsSync(join(root, "commands")) ? readdirSync(join(root, "commands")) : [])
     if (f.endsWith(".md") && !inside(join(claude, "commands", f), join(root, "commands", f))) unlinked.push(`commands/${f}`);
   const isSkeleton = pkg.name === "knowledge-skeleton";
+  const { pin } = skeletonPin();
+  const pinOk = !pin || pin === pkg.version;
   return {
-    id: "skeleton-version", level: "fail", ok: isSkeleton && !unlinked.length,
+    id: "skeleton-version", level: "fail", ok: isSkeleton && !unlinked.length && pinOk,
     detail: {
-      root, version: pkg.version || null, head: git("rev-parse", "--short", "HEAD")[0],
+      root, version: pkg.version || null, pin, head: git("rev-parse", "--short", "HEAD")[0],
       dirty: git("status", "--porcelain").length, unlinked,
       ...(isSkeleton ? {} : { problem: `${HOOKS} does not resolve into a knowledge-skeleton checkout` }),
+      ...(pinOk ? {} : { problem: `${PIN_FILE} pins ${pin}, the skeleton is ${pkg.version}: pull the skeleton, or adapt the vault and bump the pin` }),
     },
   };
 }

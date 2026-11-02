@@ -11,7 +11,10 @@ import { readFileSync, existsSync, readdirSync, statSync, openSync, readSync, cl
 import { join } from "node:path";
 import { release } from "node:os";
 import { spawn, spawnSync } from "node:child_process";
-import { VAULT, DEV_ROOT, HOOKS, sessionDbs, failures, HOOK_EVENTS, ledgerRead, logicalDate, FOLDERS, CONFIG } from "./brain-lib.mjs";
+import {
+  VAULT, DEV_ROOT, HOOKS, sessionDbs, failures, HOOK_EVENTS, ledgerRead, logicalDate, FOLDERS, CONFIG,
+  PIN_FILE, skeletonPin, compareVersions,
+} from "./brain-lib.mjs";
 
 /**
  * Which OS this session runs on, detected now rather than written into a file. A machine may
@@ -41,28 +44,66 @@ function machine() {
 }
 
 /**
+ * Fast-forward one checkout from its upstream: clean tree only (untracked files never block a
+ * fast-forward), pull only - pushing stays the user's call. `{ skipped }`, `{ failed }`, or the
+ * commit count and the `git` runner for a follow-up question about the pulled range.
+ */
+function ffPull(cwd) {
+  const git = (...a) =>
+    spawnSync("git", a, {
+      cwd, encoding: "utf8", windowsHide: true, timeout: 8_000,
+      env: { ...process.env, GIT_TERMINAL_PROMPT: "0" },
+    });
+  if (git("status", "--porcelain", "--untracked-files=no").stdout?.trim()) return { skipped: true };
+  const before = git("rev-parse", "HEAD").stdout?.trim();
+  const r = git("pull", "--ff-only", "--quiet");
+  if (r.status !== 0) return { failed: (r.stderr || r.error?.message || "timeout").trim().split("\n")[0] };
+  return { n: Number(git("rev-list", "--count", `${before}..HEAD`).stdout?.trim() || 0), before, git };
+}
+
+/**
  * Fast-forward the vault from origin before the session reads it ([[0045-cross-os-vault-sync-and-os-stamps]]).
- * The two boots never edit at once, so every conflict so far was a forgotten pull. Pull only:
- * pushing stays the user's call. Clean tree only (untracked files never block a fast-forward).
+ * The two boots never edit at once, so every conflict so far was a forgotten pull.
  * Silent when already current; one line when it pulled or could not.
  */
 function vaultPull() {
   if (process.env.CLAUDE_INVOKED_BY || process.argv.includes("--dry")) return null;
-  const git = (...a) =>
-    spawnSync("git", a, {
-      cwd: VAULT, encoding: "utf8", windowsHide: true, timeout: 8_000,
-      env: { ...process.env, GIT_TERMINAL_PROMPT: "0" },
-    });
-  if (git("status", "--porcelain", "--untracked-files=no").stdout?.trim())
-    return "!! VAULT PULL skipped: uncommitted changes. Commit or stash, then `git pull --ff-only`.";
-  const before = git("rev-parse", "HEAD").stdout?.trim();
-  const r = git("pull", "--ff-only", "--quiet");
-  if (r.status !== 0)
-    return `!! VAULT PULL failed: ${(r.stderr || r.error?.message || "timeout").trim().split("\n")[0]}. Pull by hand before editing.`;
-  const n = Number(git("rev-list", "--count", `${before}..HEAD`).stdout?.trim() || 0);
-  if (!n) return null;
+  const r = ffPull(VAULT);
+  if (r.skipped) return "!! VAULT PULL skipped: uncommitted changes. Commit or stash, then `git pull --ff-only`.";
+  if (r.failed) return `!! VAULT PULL failed: ${r.failed}. Pull by hand before editing.`;
+  if (!r.n) return null;
   spawn(process.execPath, ["--bun", join(HOOKS, "brain-reindex.mjs"), "--vault"], { detached: true, stdio: "ignore", windowsHide: true }).unref();
-  return `Vault pulled ${n} commit${n === 1 ? "" : "s"} from origin (the other OS may have written since). Reindex scheduled.`;
+  return `Vault pulled ${r.n} commit${r.n === 1 ? "" : "s"} from origin (the other OS may have written since). Reindex scheduled.`;
+}
+
+/**
+ * Fast-forward the engine the hooks run from, so both machines run the skeleton the vault pins.
+ * This hook is already loaded; the next hook to start runs the pulled code. A detached HEAD is a
+ * checkout pinned on purpose (a tag), left alone and silent. The hook block in settings.json is
+ * a copy of settings.hooks.json, so a pull that changes that file asks for the installer.
+ */
+function skeletonPull() {
+  if (process.env.CLAUDE_INVOKED_BY || process.argv.includes("--dry")) return null;
+  const root = skeletonPin().root;
+  if (spawnSync("git", ["symbolic-ref", "-q", "HEAD"], { cwd: root, windowsHide: true }).status !== 0) return null;
+  const r = ffPull(root);
+  if (r.skipped) return `!! SKELETON PULL skipped: uncommitted changes in ${root}.`;
+  if (r.failed) return `!! SKELETON PULL failed: ${r.failed}. Pull ${root} by hand.`;
+  if (!r.n) return null;
+  const hooks = r.git("diff", "--name-only", `${r.before}..HEAD`, "--", "settings.hooks.json").stdout?.trim();
+  return (
+    `Skeleton pulled ${r.n} commit${r.n === 1 ? "" : "s"} into ${root}; hooks started from now on run the new code.` +
+    (hooks ? " settings.hooks.json changed: rerun its install.ts so settings.json carries the new hook block." : "")
+  );
+}
+
+/** One line when the running skeleton is not the version the vault pins, naming which side moves. Silent on a match or with no pin. */
+function pinCheck() {
+  const { root, version, pin } = skeletonPin();
+  if (!pin || !version || compareVersions(version, pin) === 0) return null;
+  return compareVersions(version, pin) < 0
+    ? `!! SKELETON ${version} is behind the vault's pin ${pin}: \`git -C ${root} pull --ff-only\`.`
+    : `!! SKELETON ${version} is ahead of the vault's pin ${pin}: read its changes since ${pin} (\`git -C ${root} log\`), adapt the vault, then set ${PIN_FILE} to ${version} and commit it.`;
 }
 
 const STALE_DAYS = 3; // slack for a weekend off, tight enough to catch a real break early
@@ -228,10 +269,18 @@ try {
     process.exit(0);
   }
 
-  // First, so everything below reads the pulled vault.
+  // First, so everything below reads the pulled vault and the pulled skeleton's version.
   let pulled = null;
   try {
     pulled = vaultPull();
+  } catch {}
+  let skeleton = null;
+  try {
+    skeleton = skeletonPull();
+  } catch {}
+  let pinned = null;
+  try {
+    pinned = pinCheck();
   } catch {}
   // Never let the canary break the injection it rides on.
   let canary = null;
@@ -263,6 +312,8 @@ try {
   const ctx = [
     ...failing.flatMap((l) => [l, ""]),
     ...(pulled ? [pulled, ""] : []),
+    ...(skeleton ? [skeleton, ""] : []),
+    ...(pinned ? [pinned, ""] : []),
     ...(canary ? [canary, ""] : []),
     ...(health ? [health, ""] : []),
     ...(decisions ? [decisions, ""] : []),
