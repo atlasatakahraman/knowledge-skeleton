@@ -92,7 +92,7 @@ maintenance.
 | `!! VAULT PULL skipped: …` | The vault has uncommitted changes, or cannot fast-forward | Commit or stash, then `git pull --ff-only` |
 | `!! SKELETON PULL skipped: …` (or `failed`) | The skeleton checkout has uncommitted changes, or cannot fast-forward | Commit or stash there, then `git pull --ff-only` |
 | `!! SKELETON x is behind the vault's pin y` | Another machine moved the vault to a newer skeleton; this one has not pulled it | `git -C <skeleton> pull --ff-only` |
-| `!! SKELETON x is ahead of the vault's pin y` | The skeleton moved on; the vault is still written for the older one | Read the skeleton's changes since `y`, adapt the vault, then set `.skeleton.json` to `x` and commit it |
+| `!! SKELETON x is ahead of the vault's pin y` | The skeleton moved on; the vault is still written for the older one | Read the skeleton's changes since `y` (`git -C <skeleton> log vy..`), adapt the vault, then set `.skeleton.json` to `x` and commit it |
 | `brain-doctor` FAIL in `vault-index` | Notes the index hasn't caught up with, or rows for files that are gone, or a CRLF note | `brain-doctor --repair`; `brain-prune.mjs --apply`; convert the note to LF |
 | `brain-doctor` FAIL in `retrieval` | A question in `retrieval-cases.json` no longer returns its note | A renamed note, a CRLF note, or a search regression. `failed` lists each query and what it got |
 | `brain-doctor` FAIL in `frontmatter` | A note lacks `type:` or `created:` | Add them ([Conventions](00-Meta/Conventions.md)) |

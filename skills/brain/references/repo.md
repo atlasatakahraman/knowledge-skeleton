@@ -15,8 +15,13 @@ aliases: [Other Name]        # if the folder name differs from the project name
 created: <today>
 updated: <today>
 status: in-progress          # completion gate reads this
+checkout: <Remote-Name>      # relative to devRoot; brain-verify resolves it per machine
+docs: <Remote-Name>/docs     # optional, same rule
 ---
 ```
+
+Never an absolute path in `checkout:`/`docs:`: the checkouts folder differs per machine, and
+`brain-verify` fails on one.
 
 Sections that earn their place:
 - What it is, and **where the code is** (path, remote, branch, license)

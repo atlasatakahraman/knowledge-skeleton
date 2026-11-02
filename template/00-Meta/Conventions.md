@@ -84,6 +84,11 @@ A repository's page in `10-Repos/` is an index entry, not documentation: what th
 licence, its `checkout:` pointer, and a **"Known gaps — don't chase these"** section. That section
 stops an agent re-investigating something already decided.
 
+`checkout: <Remote-Name>` and `docs: <Remote-Name>/docs` are relative to `devRoot` in
+`config.json`, so one note resolves on every machine. `brain-verify` fails on an absolute pointer
+and on one into a cloned checkout that does not exist; a repo this machine never cloned is listed,
+not failed.
+
 ## Where things live
 
 | Content | Location |

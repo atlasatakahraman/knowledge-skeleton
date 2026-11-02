@@ -51,7 +51,7 @@ Not registered on any event. Run them by hand, or from `/brain-sync`. All run as
 | `brain-doctor.mjs` | none → JSON · `--pretty` · `--repair` · `--record` · `--only <ids>` | Zero-token health check, thirteen checks. **Fail:** `vault-index`, `retrieval` (the questions in `00-Meta/retrieval-cases.json` return their notes), `sessions`, `auth`, `frontmatter`, `links`, `reach`, `ignores`, `commits`, `priming`, `graph-links`, `skeleton-version`. **Warn:** `hygiene`. `--repair` rebuilds derived artifacts only and never edits a note; `--record` writes today's line in `50-Ops/Health/`. Always exits 0 |
 | `brain-graph.mjs` | `--force` | Rebuild the graph by hand: graphify, the wikilink bridge, the merge |
 | `brain-hubs.mjs` | none | Regenerate the generated hubs from the folders. Never edit a hub by hand |
-| `brain-verify.mjs` | none | Every `[[wikilink]]` and every `checkout:` pointer resolves. Exits 1 on a break |
+| `brain-verify.mjs` | none | Every `[[wikilink]]` resolves, and every `checkout:`/`docs:` pointer exists under `devRoot` (relative; a repo not cloned here is listed, an absolute pointer fails). Exits 1 on a break |
 | `brain-prune.mjs` | none → report · `--apply` | Drop index entries whose source file is gone, after a backup |
 | `brain-commit.mjs` | `--backfill YYYY-MM-DD` · `--dry-run` | The commit recorder, from a date, idempotent |
 | `brain-flush.mjs` | `<session-id> <cwd> [--date YYYY-MM-DD] [--dry-run]` | A flush by hand; `--date` backfills a missed note |

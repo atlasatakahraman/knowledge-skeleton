@@ -69,7 +69,8 @@ days*, a heuristic that can discard useful notes. Here the file is already gone 
 index entry is a lie with no information value, and removing it cannot lose knowledge.
 
 5. **Verify referential integrity** — every `[[wikilink]]` resolves, every `checkout:`/`docs:`
-   pointer exists on disk. Exits non-zero if anything is broken:
+   pointer exists under `devRoot` (a repo not cloned on this machine is listed, not failed).
+   Exits non-zero if anything is broken:
 
 ```bash
 bun --bun ~/.claude/hooks/brain-verify.mjs

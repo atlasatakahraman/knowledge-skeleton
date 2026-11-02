@@ -223,6 +223,6 @@ the vault). The vault stays a folder of Markdown notes.
 | `ignores` FAIL on a fresh clone | `.graphifyignore` names a folder git did not bring: an empty folder needs a `.gitkeep` |
 | `links` FAIL on a fresh clone, pointing at a date | A record links a daily log that was never committed: commit it, or let the flush write it |
 | `!! SKELETON x is behind the vault's pin y` at session start | The other machine moved the vault to a newer skeleton: `git -C <skeleton> pull --ff-only` |
-| `!! SKELETON x is ahead of the vault's pin y` | The skeleton moved on: read its changes since `y`, adapt the vault, set `.skeleton.json` to `x`, commit |
+| `!! SKELETON x is ahead of the vault's pin y` | The skeleton moved on: read its changes since `y` (`git -C <skeleton> log vy..`), adapt the vault, set `.skeleton.json` to `x`, commit |
 | `pin FAIL` from the installer | The adopted vault pins another version: check out that one, or adapt the vault and bump the pin |
 | Every hook errors with `no knowledge config` | Step 3 is missing, or `$KNOWLEDGE_CONFIG` points somewhere empty |

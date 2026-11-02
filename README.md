@@ -59,10 +59,13 @@ time. `install.ts` writes it. Check what the hooks see with `bun --bun hooks/ske
 Each session start fast-forwards the vault and this checkout, each only when its tree is clean,
 and never pushes. A checkout on a detached HEAD (a tag) is pinned on purpose and left alone.
 
-The vault's `.skeleton.json` (`{"version":"0.1.0"}`) pins the skeleton version its notes are
+The vault's `.skeleton.json` (`{"version":"0.2.0"}`) pins the skeleton version its notes are
 written for; `install.ts` writes it into a new vault. When the running checkout is another
 version, the session opens with one line saying which side moves, and `brain-doctor`'s
 `skeleton-version` fails. A vault without the file is not checked.
+
+Every version bump in `package.json` is tagged `v<version>` on the commit that makes it, so
+`git log v<pin>..` lists what changed since the vault's pin.
 
 ## Third-party tools
 
