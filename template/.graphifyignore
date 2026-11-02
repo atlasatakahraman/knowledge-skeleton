@@ -1,0 +1,8 @@
+# Obsidian config and plugin bundles - not notes
+.obsidian/
+
+# Unsorted capture - not yet a note worth graphing
+90-Inbox/
+
+# node_modules, target, out, dist, build, .next, .git and graphify-out are already in graphify's
+# built-in skip list. graphify also reads .gitignore: a rule there hides files from the graph too.

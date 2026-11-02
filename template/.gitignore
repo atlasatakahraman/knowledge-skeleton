@@ -1,0 +1,21 @@
+# Graphify output - rebuildable, and graph.json is large
+graphify-out/
+
+# Obsidian per-machine state
+.obsidian/workspace.json
+.obsidian/workspace-mobile.json
+.obsidian/cache
+.obsidian/graph.json
+
+# Obsidian plugin code - reinstallable from community-plugins.json
+.obsidian/plugins/
+.obsidian/themes/
+
+# brain-compile state - rebuildable hashes
+50-Ops/brain-compile-state.json
+
+# Hook event log - append-only diagnostics, read in place, never committed
+50-Ops/hook-events.jsonl
+
+# Office lock files
+~$*

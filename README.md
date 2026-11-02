@@ -9,7 +9,20 @@ and a link graph current. The vault itself holds notes only and stays private.
 hooks/          brain-*.mjs   Claude Code hooks and their tools, run with `bun --bun`
 skills/brain/                 /brain new|edit <kind> - writes notes in the vault's conventions
 commands/       brain-*.md    /brain-commits /brain-log /brain-sync /brain-usage
+template/                     the empty vault: folders, MOCs, conventions, system docs, Identity and
+                              Hard-Rules stubs (`FILL:` marks each placeholder)
 ```
+
+## Starting a vault from the template
+
+```bash
+cp -r ~/dev/knowledge-skeleton/template ~/knowledge && git -C ~/knowledge init
+```
+
+Then fill `00-Meta/Identity.md` and `00-Meta/Hard-Rules.md` (`grep -rn "FILL:" ~/knowledge/00-Meta`
+lists what is left) and replace the questions in `00-Meta/retrieval-cases.json` with ones the vault
+must always answer: `brain-doctor`'s `retrieval` check runs them. The template's own `README.md`
+has the rest.
 
 ## Requirements
 
@@ -46,9 +59,8 @@ Get-ChildItem C:\dev\knowledge-skeleton\commands\brain-*.md | ForEach-Object {
   New-Item -ItemType SymbolicLink -Path "$HOME\.claude\commands\$($_.Name)" -Target $_.FullName }
 ```
 
-Then register the hooks in `~/.claude/settings.json`. An installer that does all of this, plus the
-empty vault template, is on the way; until then `bun --bun hooks/brain-doctor.mjs --pretty` says
-what is missing.
+Then register the hooks in `~/.claude/settings.json`. An installer that does all of this is on the
+way; until then `bun --bun hooks/brain-doctor.mjs --pretty` says what is missing.
 
 ## Third-party tools
 

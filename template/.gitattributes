@@ -1,0 +1,6 @@
+# Notes stay LF on disk, whatever core.autocrlf says. context-mode's markdown chunker splits on
+# "\n" and its heading regex fails on a trailing "\r", so a CRLF note is indexed as ONE chunk and
+# loses every ranking (brain-doctor's vault-index check reports any CRLF note).
+*.md text eol=lf
+*.jsonl text eol=lf
+*.json text eol=lf

@@ -1,0 +1,6 @@
+[
+  { "query": "frontmatter schema naming wikilinks basenames", "note": "Conventions" },
+  { "query": "retrieval tiers MOC ctx_search graphify", "note": "Retrieval-Protocol" },
+  { "query": "hook event writes cost fails silent", "note": "Hook-Lifecycle" },
+  { "query": "forward links deliberate unresolved allowlist", "note": "Forward-Links" }
+]
