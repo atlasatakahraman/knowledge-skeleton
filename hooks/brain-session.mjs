@@ -13,7 +13,7 @@ import { release } from "node:os";
 import { spawn, spawnSync } from "node:child_process";
 import {
   VAULT, DEV_ROOT, HOOKS, sessionDbs, failures, HOOK_EVENTS, ledgerRead, logicalDate, FOLDERS, CONFIG,
-  PIN_FILE, skeletonPin, compareVersions, withLock,
+  PIN_FILE, skeletonPin, compareVersions, withLock, syncRecords, recordFailure, clearFailure,
 } from "./brain-lib.mjs";
 
 /**
@@ -67,6 +67,25 @@ function ffPull(cwd) {
     if (m.status !== 0) return { failed: why(m) };
     return { n: Number(git("rev-list", "--count", `${before}..HEAD`).stdout?.trim() || 0), before, git };
   }, 60_000) ?? { busy: true };
+}
+
+/**
+ * Commit and push records an earlier session left behind: its SessionEnd sync never ran, or the
+ * machine went down first (a reboot into the other OS). Before the vault pull, so the tree it
+ * pulls into is clean. Silent when there was nothing to do.
+ */
+function recordsSync() {
+  if (process.env.CLAUDE_INVOKED_BY || process.argv.includes("--dry")) return null;
+  const r = syncRecords();
+  if (r.failed) {
+    recordFailure("records", new Error(r.failed));
+    return null; // the `!! BRAIN RECORDS FAILING` line carries it
+  }
+  if (!r.busy) clearFailure("records");
+  if (r.held) return `!! RECORDS committed but not pushed: ${VAULT} has your own unpushed commits, and a push sends both. Push when they are ready.`;
+  if (r.skipped === "other changes are staged") return "!! RECORDS not committed: other changes are staged in the vault.";
+  if (r.pushed) return `Records from an earlier session committed and pushed (${r.committed} file${r.committed === 1 ? "" : "s"}).`;
+  return null;
 }
 
 /**
@@ -279,7 +298,12 @@ try {
     process.exit(0);
   }
 
-  // First, so everything below reads the pulled vault and the pulled skeleton's version.
+  // First, so everything below reads the pulled vault and the pulled skeleton's version. Leftover
+  // records go out before the pull, so the pull meets a clean tree.
+  let records = null;
+  try {
+    records = recordsSync();
+  } catch {}
   let pulled = null;
   try {
     pulled = vaultPull();
@@ -321,6 +345,7 @@ try {
 
   const ctx = [
     ...failing.flatMap((l) => [l, ""]),
+    ...(records ? [records, ""] : []),
     ...(pulled ? [pulled, ""] : []),
     ...(skeleton ? [skeleton, ""] : []),
     ...(pinned ? [pinned, ""] : []),

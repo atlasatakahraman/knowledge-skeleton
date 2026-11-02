@@ -102,6 +102,9 @@ try {
   if (!tp || !sid) process.exit(0);
   writeWatermark(sid, { triedAt: Date.now() });
   detach("brain_flush", join(HOOKS, "brain-flush.mjs"), sid, String(input.cwd || ""), "--transcript", tp);
+  // SessionEnd's flush is the session's last write, and it lands after the user's last commit. Once
+  // it finishes, commit and push the records, or the other boot never sees this session.
+  if (event === "SessionEnd") detach("brain_records", join(HOOKS, "brain-records.mjs"), sid);
 } catch {
   /* a logging hook must never break a session */
 }

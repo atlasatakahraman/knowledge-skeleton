@@ -14,7 +14,7 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync } from 
 import { join, basename } from "node:path";
 import { execFileSync } from "node:child_process";
 import {
-  readStdin, logicalDate, VAULT, HOOKS, repoList, recentCommits, recordedCommits, quoteDeadLinks, unrecorded, OS_TAG, FOLDERS,
+  readStdin, logicalDate, VAULT, HOOKS, repoList, recentCommits, recordedCommits, quoteDeadLinks, unrecorded, OS_TAG, FOLDERS, isRecordPath,
 } from "./brain-lib.mjs";
 
 const dry = process.argv.includes("--dry-run");
@@ -185,9 +185,10 @@ try {
   let written = 0;
   for (const c of fresh) {
     const files = filesOf(c);
-    // A commit that only adds commit records would record itself forever, one trailing note per
-    // commit of the notes. Skip it — its content IS the record.
-    if (c.root === VAULT && files.length && files.every((f) => f.startsWith(`${FOLDERS.ops}/Commits/`))) continue;
+    // A commit of hook-written records alone (RECORD_PATHS: commit notes, logs, the ledger) would
+    // record itself forever, one trailing note per commit of the notes. Skip it — its content IS the
+    // record. syncRecords' commits are these.
+    if (c.root === VAULT && files.length && files.every(isRecordPath)) continue;
 
     const { month, dd } = dayOf(c.iso);
     const key = `${month}-${dd}`;

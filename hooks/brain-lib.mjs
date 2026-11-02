@@ -4,7 +4,7 @@
 import { readFileSync, existsSync, mkdirSync, writeFileSync, readdirSync, appendFileSync, statSync, copyFileSync, realpathSync, openSync, closeSync, rmSync } from "node:fs";
 import { join, dirname, basename, relative } from "node:path";
 import { homedir, tmpdir } from "node:os";
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { Database } from "bun:sqlite";
 
 /**
@@ -333,6 +333,93 @@ export function withLock(name, fn, staleMs = 300_000) {
   } finally {
     try { rmSync(lock, { force: true }); } catch {}
   }
+}
+
+/**
+ * What the hooks write on their own, vault-relative: daily logs and their hub, commit notes and
+ * their index, the decision ledger, health lines, usage digests. A commit of these alone is a
+ * record, not work: brain-commit writes no note for it and the doctor's `commits` check skips it.
+ */
+export const RECORD_PATHS = [
+  FOLDERS.sessions,
+  `${FOLDERS.ops}/Commits`,
+  `${FOLDERS.ops}/decisions.jsonl`,
+  `${FOLDERS.ops}/Health`,
+  `${FOLDERS.ops}/Usage`,
+  `${FOLDERS.ops}/00-MOC-Ops.md`,
+];
+export const isRecordPath = (f) => RECORD_PATHS.some((p) => f === p || f.startsWith(`${p}/`));
+
+/**
+ * Commit the hook-written records and push them, so the other boot pulls them at its next session
+ * start (owner, 2026-11-02). The last flush runs at SessionEnd, after the user's last commit, so
+ * without this the session's own record never left the machine that ran it.
+ * - Commits RECORD_PATHS only, and nothing at all when the user has other changes staged.
+ * - gitleaks scans the staged records when it is installed; a finding commits nothing.
+ * - Pushes only when every unpushed commit is a record: a push sends the user's unpushed work too,
+ *   and pushing that is theirs to decide. `held` says so.
+ * - Behind origin, it rebases first. The records merge by union (.gitattributes), so two boots
+ *   appending to the same daily log do not conflict.
+ * Returns `{ busy }`, `{ skipped }`, or `{ committed, pushed, pulled, held, failed }`.
+ */
+export function syncRecords() {
+  return withLock("records", () => {
+    const git = (...a) =>
+      spawnSync("git", a, {
+        cwd: VAULT, encoding: "utf8", windowsHide: true, timeout: 30_000,
+        env: { ...process.env, GIT_TERMINAL_PROMPT: "0" },
+      });
+    const out = (...a) => git(...a).stdout?.trim() ?? "";
+    const list = (...a) => out(...a).split("\n").filter(Boolean);
+    const why = (r) => (r.stderr || r.error?.message || "timeout").trim().split("\n")[0];
+    const gitDir = join(VAULT, ".git");
+    if (git("symbolic-ref", "-q", "HEAD").status !== 0) return { skipped: "detached HEAD" };
+    if (["rebase-merge", "rebase-apply", "MERGE_HEAD"].some((f) => existsSync(join(gitDir, f))))
+      return { skipped: "a merge or rebase is in progress" };
+    if (list("diff", "--cached", "--name-only").some((f) => !isRecordPath(f))) return { skipped: "other changes are staged" };
+
+    // One missing pathspec aborts the whole `git add`: pass only what exists or is tracked (deleted).
+    const paths = RECORD_PATHS.filter((p) => existsSync(join(VAULT, p)) || list("ls-files", "--", p).length);
+    if (paths.length) git("add", "-A", "--", ...paths);
+    const staged = list("diff", "--cached", "--name-only");
+    const res = { committed: staged.length, pushed: 0, pulled: 0 };
+    if (staged.length) {
+      const leak = spawnSync("gitleaks", ["git", "--pre-commit", "--staged", "--no-banner", "-l", "warn"], {
+        cwd: VAULT, encoding: "utf8", windowsHide: true, timeout: 60_000,
+      });
+      if (leak.error?.code !== "ENOENT" && leak.status !== 0) {
+        git("reset", "-q", "--", ...paths);
+        return { ...res, committed: 0, failed: "gitleaks flagged the staged records; nothing committed" };
+      }
+      const c = git(
+        "commit", "-q", "-m", `chore(brain): records from the ${OS_TAG} boot`,
+        "-m", `Written by the hooks after the last commit, committed by syncRecords so the other boot\npulls them:\n${staged.map((f) => `- ${f}`).join("\n")}`,
+      );
+      if (c.status !== 0) return { ...res, committed: 0, failed: `commit: ${why(c)}` };
+    }
+
+    if (git("rev-parse", "--abbrev-ref", "@{u}").status !== 0) return { ...res, skipped: "no upstream" };
+    const f = git("fetch", "--quiet");
+    if (f.status !== 0) return { ...res, failed: `fetch: ${why(f)}` };
+    const unpushed = list("rev-list", "@{u}..HEAD");
+    if (unpushed.some((h) => list("show", "--name-only", "--format=", h).some((p) => !isRecordPath(p)))) return { ...res, held: true };
+    res.pulled = Number(out("rev-list", "--count", "HEAD..@{u}") || 0);
+    if (res.pulled && unpushed.length) {
+      const r = git("rebase", "--quiet", "--autostash", "@{u}");
+      if (r.status !== 0) {
+        git("rebase", "--abort");
+        return { ...res, failed: `rebase onto origin: ${why(r)}` };
+      }
+    } else if (res.pulled) {
+      const m = git("merge", "--ff-only", "--quiet", "@{u}");
+      if (m.status !== 0) return { ...res, failed: `fast-forward: ${why(m)}` };
+    }
+    if (!unpushed.length) return res;
+    const p = git("push", "--quiet");
+    if (p.status !== 0) return { ...res, failed: `push: ${why(p)}` };
+    res.pushed = unpushed.length;
+    return res;
+  }) ?? { busy: true };
 }
 
 const WATERMARKS = join(STATE_DIR, "flush-watermarks.json");

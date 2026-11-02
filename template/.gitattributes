@@ -4,3 +4,12 @@
 *.md text eol=lf
 *.jsonl text eol=lf
 *.json text eol=lf
+
+# Hook-written records travel between the boots by syncRecords (brain-lib). Both boots append to
+# the same daily log, ledger and month indexes, so a rebase would conflict on every shared day; a
+# union merge keeps both sides' lines. Commit notes are one file each and never collide.
+30-Sessions/**/*.md merge=union
+50-Ops/decisions.jsonl merge=union
+50-Ops/Commits/commits-*.md merge=union
+50-Ops/Health/*.md merge=union
+50-Ops/Usage/*.md merge=union
