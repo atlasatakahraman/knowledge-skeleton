@@ -92,6 +92,8 @@ const PREREQS: Record<string, { linux: string; windows: string }> = {
   git: { linux: "your package manager (pacman -S git, apt install git)", windows: "winget install Git.Git" },
   uv: { linux: "curl -LsSf https://astral.sh/uv/install.sh | sh", windows: 'powershell -c "irm https://astral.sh/uv/install.ps1 | iex"' },
   claude: { linux: "curl -fsSL https://claude.ai/install.sh | bash", windows: "irm https://claude.ai/install.ps1 | iex" },
+  // syncRecords commits nothing without it: records push on their own, never unscanned.
+  gitleaks: { linux: "your package manager (pacman -S gitleaks, brew install gitleaks)", windows: "winget install Gitleaks.Gitleaks" },
 };
 const bin: Record<string, string> = {};
 const missing = Object.keys(PREREQS).filter((name) => !(bin[name] = Bun.which(name) ?? ""));
