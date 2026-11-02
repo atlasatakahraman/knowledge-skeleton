@@ -132,6 +132,8 @@ if (mode === "template") {
   else {
     mkdirSync(VAULT, { recursive: true });
     cpSync(join(ROOT, "template"), VAULT, { recursive: true });
+    // The engine version this vault is written for; brain-session and brain-doctor compare it with the skeleton's.
+    writeFileSync(join(VAULT, ".skeleton.json"), `${JSON.stringify({ version: PKG.version })}\n`);
     git("init", "-q", "-b", "main");
     // An identity is the user's to set; without one the vault stays uncommitted and says so.
     const who = git("config", "user.email").ok;
@@ -142,6 +144,16 @@ if (mode === "template") {
     line("set", "vault", `${VAULT} from template/${who ? `, committed ${git("rev-parse", "--short", "HEAD").out}` : " - not committed: set git user.name and user.email, then commit"}`);
   }
 } else line("ok", "vault", `${VAULT} (adopted)`);
+
+// The pin is the vault's to commit, so an adopted vault without one is told, not written to: two
+// machines each writing it untracked would block each other's pull of the committed one.
+if (mode === "template") line(dry ? "would" : "set", "pin", `.skeleton.json pins ${PKG.version}`);
+else {
+  const pin = readJson(join(VAULT, ".skeleton.json"))?.version;
+  if (pin === PKG.version) line("ok", "pin", `.skeleton.json pins ${pin}`);
+  else if (pin) line("FAIL", "pin", `.skeleton.json pins ${pin}, this skeleton is ${PKG.version}: check out the skeleton the vault pins, or adapt the vault and bump the pin`);
+  else line("WARN", "pin", `no .skeleton.json: commit {"version":"${PKG.version}"} at the vault root so every machine checks it runs this skeleton`);
+}
 
 // Obsidian on Linux rewrites .obsidian/*.json as 755, and a mode-only change blocks SessionStart's pull.
 if (existsSync(join(VAULT, ".git")) || (dry && mode === "template")) {
