@@ -48,6 +48,8 @@ Every hook, its event and its cost: [Hook-Lifecycle](00-Meta/Hook-Lifecycle.md).
 - Session start: the vault fast-forwards if it is clean, and any `!!` line is shown.
 - Each prompt: the names of matching vault notes are injected.
 - Edits: the index and graph rebuild 90 s after the last edit.
+- Session end: once the last flush is written, the records (logs, commit notes, ledger) are
+  committed and pushed, so another machine pulls them. The next session start retries any left behind.
 - Commits in any repo under `devRoot`: one note each in `50-Ops/Commits/`.
 - Every `AskUserQuestion` answer: appended to `50-Ops/decisions.jsonl` at the next flush.
 - Writing a vault note: a missing `type`/`created` or a link to nothing is reported at once.
@@ -91,6 +93,8 @@ maintenance.
 | `!! VAULT HEALTH FAIL (date): failing: …` | The last daily sweep failed | `brain-doctor --pretty` |
 | `!! VAULT PULL skipped: …` | The vault has uncommitted changes, or cannot fast-forward | Commit or stash, then `git pull --ff-only` |
 | `!! SKELETON PULL skipped: …` (or `failed`) | The skeleton checkout has uncommitted changes, or cannot fast-forward | Commit or stash there, then `git pull --ff-only` |
+| `!! RECORDS committed but not pushed` | You have unpushed commits of your own; a push would send them too | Push when they are ready; the records go with them |
+| `!! BRAIN RECORDS FAILING since …` | The records commit or push failed: offline, a gitleaks finding, a rebase conflict | Follow the reason; `bun --bun ~/.claude/hooks/brain-records.mjs` retries |
 | `!! SKELETON x is behind the vault's pin y` | Another machine moved the vault to a newer skeleton; this one has not pulled it | `git -C <skeleton> pull --ff-only` |
 | `!! SKELETON x is ahead of the vault's pin y` | The skeleton moved on; the vault is still written for the older one | Read the skeleton's changes since `y` (`git -C <skeleton> log vy..`), adapt the vault, then set `.skeleton.json` to `x` and commit it |
 | `brain-doctor` FAIL in `vault-index` | Notes the index hasn't caught up with, or rows for files that are gone, or a CRLF note | `brain-doctor --repair`; `brain-prune.mjs --apply`; convert the note to LF |

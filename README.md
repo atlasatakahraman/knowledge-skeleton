@@ -56,10 +56,16 @@ time. `install.ts` writes it. Check what the hooks see with `bun --bun hooks/ske
 
 ## Sync
 
-Each session start fast-forwards the vault and this checkout, each only when its tree is clean,
-and never pushes. A checkout on a detached HEAD (a tag) is pinned on purpose and left alone.
+Each session start fast-forwards the vault and this checkout, each only when its tree is clean.
+A checkout on a detached HEAD (a tag) is pinned on purpose and left alone.
 
-The vault's `.skeleton.json` (`{"version":"0.2.0"}`) pins the skeleton version its notes are
+The vault pushes one thing on its own: the records the hooks write (daily logs, commit notes, the
+decision ledger, health and usage). After the SessionEnd flush, `brain-records` commits them alone
+and pushes when every unpushed commit is a record, so another machine pulls the session it did not
+run. Your own commits never push on their own and hold the records push while unpushed. The next
+session start retries what a shutdown cut off; `.gitattributes` merges the records by union.
+
+The vault's `.skeleton.json` (`{"version":"0.3.0"}`) pins the skeleton version its notes are
 written for; `install.ts` writes it into a new vault. When the running checkout is another
 version, the session opens with one line saying which side moves, and `brain-doctor`'s
 `skeleton-version` fails. A vault without the file is not checked.
