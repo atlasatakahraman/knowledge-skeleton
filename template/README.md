@@ -60,7 +60,7 @@ Every hook, its event and its cost: [Hook-Lifecycle](00-Meta/Hook-Lifecycle.md).
 **What is yours:**
 
 - **Commit with a body that says why.** The commit note copies the body verbatim.
-- **Push.** The vault pulls itself; it never pushes.
+- **Push.** The vault and the skeleton pull themselves at session start; neither pushes.
 - **Review `90-Inbox/`** and file what's there.
 - **Read the `!!` lines** at session start. See Troubleshooting.
 
@@ -90,11 +90,14 @@ maintenance.
 | `!! FLUSH CANARY: …` | Sessions are captured but no daily note for 3+ days | Read the tail of `50-Ops/hook-events.jsonl`, then run `brain-flush` with `--dry-run` |
 | `!! VAULT HEALTH FAIL (date): failing: …` | The last daily sweep failed | `brain-doctor --pretty` |
 | `!! VAULT PULL skipped: …` | The vault has uncommitted changes, or cannot fast-forward | Commit or stash, then `git pull --ff-only` |
+| `!! SKELETON PULL skipped: …` (or `failed`) | The skeleton checkout has uncommitted changes, or cannot fast-forward | Commit or stash there, then `git pull --ff-only` |
+| `!! SKELETON x is behind the vault's pin y` | Another machine moved the vault to a newer skeleton; this one has not pulled it | `git -C <skeleton> pull --ff-only` |
+| `!! SKELETON x is ahead of the vault's pin y` | The skeleton moved on; the vault is still written for the older one | Read the skeleton's changes since `y`, adapt the vault, then set `.skeleton.json` to `x` and commit it |
 | `brain-doctor` FAIL in `vault-index` | Notes the index hasn't caught up with, or rows for files that are gone, or a CRLF note | `brain-doctor --repair`; `brain-prune.mjs --apply`; convert the note to LF |
 | `brain-doctor` FAIL in `retrieval` | A question in `retrieval-cases.json` no longer returns its note | A renamed note, a CRLF note, or a search regression. `failed` lists each query and what it got |
 | `brain-doctor` FAIL in `frontmatter` | A note lacks `type:` or `created:` | Add them ([Conventions](00-Meta/Conventions.md)) |
 | `brain-doctor` FAIL in `links` | A `[[link]]` resolves to nothing | Fix it, or list it in `00-Meta/Forward-Links.md` |
 | `brain-doctor` FAIL in `reach` | A note more than 2 hops from the root MOC (a record, 3) | Link it from its folder's MOC |
 | `brain-doctor` FAIL in `commits` | A commit from the last 3 days has no note | `brain-commit.mjs --backfill <date>` |
-| `brain-doctor` FAIL in `skeleton-version` | `~/.claude/hooks`, the skill or a command does not point into one knowledge-skeleton checkout | Re-run the skeleton's `install.ts` (or step 4 of its `INSTALL.md`) |
+| `brain-doctor` FAIL in `skeleton-version` | `~/.claude/hooks`, the skill or a command does not point into one knowledge-skeleton checkout, or `.skeleton.json` pins another version | Re-run the skeleton's `install.ts` (or step 4 of its `INSTALL.md`); for the pin, the two `!! SKELETON` rows above |
 | The graph shrank | A rename or an ignore rule dropped files | [Conventions](00-Meta/Conventions.md) § Renaming; `brain-graph.mjs --force` |

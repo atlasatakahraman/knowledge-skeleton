@@ -54,6 +54,16 @@ The hooks read their paths from one untracked file, written once per machine:
 `vault` and `devRoot` are required. `rolloverHour` (default 5) is when a daily note starts, local
 time. `install.ts` writes it. Check what the hooks see with `bun --bun hooks/skeleton-config.mjs`.
 
+## Sync
+
+Each session start fast-forwards the vault and this checkout, each only when its tree is clean,
+and never pushes. A checkout on a detached HEAD (a tag) is pinned on purpose and left alone.
+
+The vault's `.skeleton.json` (`{"version":"0.1.0"}`) pins the skeleton version its notes are
+written for; `install.ts` writes it into a new vault. When the running checkout is another
+version, the session opens with one line saying which side moves, and `brain-doctor`'s
+`skeleton-version` fails. A vault without the file is not checked.
+
 ## Third-party tools
 
 Installed from their own upstreams, never vendored here:

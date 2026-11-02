@@ -15,6 +15,9 @@ what notices when it breaks. The rationale is in [[Why-This-Exists]].
 The hooks live in the knowledge-skeleton checkout's `hooks/`; `~/.claude/hooks` is a link to it,
 and `brain-doctor`'s `skeleton-version` check fails when it is not. Every hook runs as
 `bun --bun ~/.claude/hooks/<hook>` and reads its paths from the machine's `config.json`.
+`.skeleton.json` at the vault root pins the skeleton version the vault is written for:
+`brain-session` says so at session start when the checkout is another version, and
+`skeleton-version` fails.
 
 Every brain hook **fails silent at runtime**: it exits 0 and never blocks the session. The last
 column says what notices a failure.
@@ -23,7 +26,7 @@ column says what notices a failure.
 
 | Event | Matcher | Hook | What it does | Writes | Cost | When it fails |
 |---|---|---|---|---|---|---|
-| `SessionStart` | — | `brain-session.mjs` | Fast-forwards the vault when it is clean, then injects what changes per session: the current OS, the retrieval order, the flush canary, any recorded `claude -p` failure, the health alarm, and how many captured decisions wait for promotion. Identity and Hard-Rules are **not** injected here: `~/.claude/CLAUDE.md` imports both whole, because a hook's context past 10,000 chars is cut to a preview. Re-runs a flush that was killed when the app closed | — | ~2,000 chars, once per session; must stay ≤ 10,000 | `brain-doctor` § priming |
+| `SessionStart` | — | `brain-session.mjs` | Fast-forwards the vault and the skeleton checkout, each only when clean (a checkout on a detached HEAD is pinned on purpose and left alone), and says in one line when the skeleton is not the version `.skeleton.json` pins. Then injects what changes per session: the current OS, the retrieval order, the flush canary, any recorded `claude -p` failure, the health alarm, and how many captured decisions wait for promotion. Identity and Hard-Rules are **not** injected here: `~/.claude/CLAUDE.md` imports both whole, because a hook's context past 10,000 chars is cut to a preview. Re-runs a flush that was killed when the app closed | — | ~2,000 chars, once per session; must stay ≤ 10,000 | `brain-doctor` § priming, § skeleton-version |
 | `UserPromptSubmit` | — | `brain-inject.mjs` | Names of vault notes matching the prompt, from the vault index only | — | ≤ 1,200 chars on a hit, 0 otherwise | `brain-doctor` § retrieval, which runs the same search |
 | `PreCompact`, `SessionEnd` | — | `brain-capture.mjs` | Logs the event, then detaches compile, usage and flush (below). Timeout 10 s | `50-Ops/hook-events.jsonl` | free itself | the flush canary |
 | `Stop`, `SubagentStop` | — | `brain-capture.mjs` | The same, **async**, at most once per 20 min per session, flush only | same | same | same |

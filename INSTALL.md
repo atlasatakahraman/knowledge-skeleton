@@ -60,9 +60,13 @@ A new one from the template, or an existing clone (then skip to `core.fileMode`)
 
 ```bash
 cp -r <skeleton>/template <vault>
+echo "{\"version\":\"$(jq -r .version <skeleton>/package.json)\"}" > <vault>/.skeleton.json
 git -C <vault> init -b main && git -C <vault> add -A && git -C <vault> commit -m "chore: new vault from knowledge-skeleton"
 git -C <vault> config core.fileMode false
 ```
+
+`.skeleton.json` pins the skeleton version the vault is written for; each session start compares it
+with the checkout. An adopted vault without one is not checked: commit the same file there once.
 
 `core.fileMode false`: Obsidian on Linux rewrites `.obsidian/*.json` with mode 755, and a mode-only
 change blocks the SessionStart pull. The vault tracks no executables.
@@ -195,10 +199,11 @@ in `00-Meta/Identity.md` and `00-Meta/Hard-Rules.md` and replace the questions i
 
 ## Updating
 
-Never automatic:
+The skeleton fast-forwards itself at each session start when its tree is clean; when its
+`settings.hooks.json` changed, that session says to rerun `install.ts`. When its version moves past
+the vault's `.skeleton.json`, adapt the vault and bump the pin. The tools never update themselves:
 
 ```bash
-git -C <skeleton> pull --ff-only
 uv tool upgrade graphifyy
 claude plugin update context-mode@context-mode
 ```
@@ -217,4 +222,7 @@ the vault). The vault stays a folder of Markdown notes.
 | `link FAIL ... Developer Mode` on Windows | A file symlink needs Developer Mode or an elevated shell |
 | `ignores` FAIL on a fresh clone | `.graphifyignore` names a folder git did not bring: an empty folder needs a `.gitkeep` |
 | `links` FAIL on a fresh clone, pointing at a date | A record links a daily log that was never committed: commit it, or let the flush write it |
+| `!! SKELETON x is behind the vault's pin y` at session start | The other machine moved the vault to a newer skeleton: `git -C <skeleton> pull --ff-only` |
+| `!! SKELETON x is ahead of the vault's pin y` | The skeleton moved on: read its changes since `y`, adapt the vault, set `.skeleton.json` to `x`, commit |
+| `pin FAIL` from the installer | The adopted vault pins another version: check out that one, or adapt the vault and bump the pin |
 | Every hook errors with `no knowledge config` | Step 3 is missing, or `$KNOWLEDGE_CONFIG` points somewhere empty |
