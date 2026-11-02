@@ -1,6 +1,6 @@
 // brain-verify.mjs - referential integrity of the vault. Two checks, one command:
 //   1. every [[wikilink]] resolves to a real note
-//   2. every checkout:/docs: pointer in a 10-Repos note exists on disk
+//   2. every checkout:/docs: pointer in a 10-Repos note exists under devRoot (when cloned here)
 //
 // Runtime is bun (`bun --bun`), per 00-Meta/Hard-Rules. Exits 1 if anything is broken, so it
 // can gate a script; prints nothing but the verdict when clean.
@@ -10,8 +10,8 @@
 // so it silently skipped three files and reported a confident wrong number. A wrong-but-plausible
 // answer is worse than an error, and re-deriving a check each run is how you get one.
 import { readdirSync, readFileSync, existsSync } from "node:fs";
-import { join, basename, relative, sep } from "node:path";
-import { VAULT, forwardLinks, FOLDERS } from "./brain-lib.mjs";
+import { join, basename, relative, sep, isAbsolute } from "node:path";
+import { VAULT, DEV_ROOT, forwardLinks, FOLDERS } from "./brain-lib.mjs";
 
 const SKIP = new Set(["graphify-out", ".obsidian", ".remember", ".git", "node_modules"]);
 // 80-Assets holds attachments and verbatim COPIES of repo files. They are valid link TARGETS but
@@ -91,7 +91,20 @@ for (const f of allMd.filter(isVaultNote)) {
 
 let ptrs = 0;
 const dead = [];
+const notCloned = new Set();
 const REPOS = join(VAULT, FOLDERS.repos);
+// A pointer is relative to DEV_ROOT: `checkout: <remote-name>`, `docs: <remote-name>/docs`. Each
+// machine resolves it against its own devRoot, so one note serves both boots; an absolute path
+// (`C:\dev\X`) is dead on the other OS and fails here. A checkout this machine never cloned is
+// reported, not failed: not every machine clones every repo.
+function check(f, key, value) {
+  ptrs++;
+  if (isAbsolute(value) || /^[A-Za-z]:|\\/.test(value))
+    return dead.push(`${f}  ${key}  ${value}  (absolute: write it relative to devRoot)`);
+  const repo = value.split("/")[0];
+  if (!existsSync(join(DEV_ROOT, repo))) return notCloned.add(repo);
+  if (!existsSync(join(DEV_ROOT, value))) dead.push(`${f}  ${key}  ${value}`);
+}
 // Every note under 10-Repos: since the Stage 03 restructure a repo page is <Repo>/<Repo>.md, and
 // reading only the top level had left all ten checkout: pointers unchecked.
 for (const f of allMd.filter((p) => p.startsWith(REPOS + sep)).map((p) => relative(REPOS, p))) {
@@ -103,16 +116,12 @@ for (const f of allMd.filter((p) => p.startsWith(REPOS + sep)).map((p) => relati
     const kv = line.match(/^(checkout|docs):\s*(.*)$/);
     if (kv) {
       inList = kv[2].trim() === "";
-      if (kv[2].trim()) {
-        ptrs++;
-        if (!existsSync(kv[2].trim())) dead.push(`${f}  ${kv[1]}  ${kv[2].trim()}`);
-      }
+      if (kv[2].trim()) check(f, kv[1], kv[2].trim());
       continue;
     }
     const item = line.match(/^\s*-\s+(.+)$/);
     if (inList && item) {
-      ptrs++;
-      if (!existsSync(item[1].trim())) dead.push(`${f}  checkout  ${item[1].trim()}`);
+      check(f, "checkout", item[1].trim());
       continue;
     }
     if (line.trim() && !/^\s/.test(line)) inList = false;
@@ -121,9 +130,10 @@ for (const f of allMd.filter((p) => p.startsWith(REPOS + sep)).map((p) => relati
 
 console.log(`notes ${allMd.filter(isVaultNote).length} · links ${links} · pointers ${ptrs}`);
 console.log(`known-dangling (allowlisted in Forward-Links): ${known}`);
+if (notCloned.size) console.log(`not cloned under ${DEV_ROOT}: ${[...notCloned].sort().join(", ")}`);
 
 if (!broken.length && !dead.length) {
-  console.log("OK - every link resolves, every pointer exists");
+  console.log("OK - every link resolves, every pointer to a cloned checkout exists");
   process.exit(0);
 }
 if (broken.length) {
