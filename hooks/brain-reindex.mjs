@@ -6,7 +6,7 @@ import { join, sep, basename } from "node:path";
 import { tmpdir } from "node:os";
 import { spawn, execFileSync } from "node:child_process";
 import {
-  readStdin, normDir, VAULT, HOOKS, DEV_ROOT, contextModeCli, INDEX_EXCLUDES, indexVault,
+  readStdin, normDir, VAULT, HOOKS, DEV_ROOT, contextModeCli, INDEX_EXCLUDES, indexVault, pruneVaultIndex,
   NOTE_EXEMPT, walkVault, frontmatterOk, brokenLinksIn, rebuildGraph, FOLDERS,
 } from "./brain-lib.mjs";
 
@@ -151,7 +151,11 @@ if (process.argv.includes("--settle")) {
         if (s.vault === false) break; // only repo docs changed; the vault indexes are current
         // The FTS index before graphify: it takes seconds, and it is what retrieval and brain-doctor
         // read. After graphify it waited on the slow graph rebuild, so fresh notes stayed unindexed
-        // longer.
+        // longer. Prune first: indexing never drops a row, so a note deleted or moved outside
+        // Edit|Write stayed a ghost (doctor FAIL) until the daily sweep (2026-11-03).
+        try {
+          pruneVaultIndex();
+        } catch {}
         try {
           indexVault();
         } catch {}
