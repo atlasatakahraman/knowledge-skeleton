@@ -77,8 +77,12 @@ change blocks the SessionStart pull. The vault tracks no executables.
 
 ### 3. config.json
 
-`~/.config/knowledge/config.json` (`$XDG_CONFIG_HOME/knowledge/` when set);
-`%APPDATA%\knowledge\config.json` on Windows; `$KNOWLEDGE_CONFIG` overrides both.
+`~/.config/knowledge/config.json` on every OS (`$XDG_CONFIG_HOME/knowledge/` when set);
+`$KNOWLEDGE_CONFIG` overrides it. On Windows that is `%USERPROFILE%\.config\knowledge\`, not
+`%APPDATA%`: a packaged (MSIX) app such as Claude desktop has its `%APPDATA%` writes redirected to
+`%LOCALAPPDATA%\Packages\<app>\LocalCache\Roaming`, so a config written from inside it never reaches
+a plain terminal. A Windows machine set up before 2026-11-04 moves `%APPDATA%\knowledge\config.json`
+there; the hooks name both paths until it does.
 
 ```json
 { "vault": "/home/me/knowledge", "devRoot": "/home/me/dev", "os": "arch",

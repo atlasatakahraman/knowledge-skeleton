@@ -42,9 +42,9 @@ has the rest.
 
 The hooks read their paths from one untracked file, written once per machine:
 
-- Linux / macOS: `~/.config/knowledge/config.json` (or `$XDG_CONFIG_HOME/knowledge/config.json`)
-- Windows: `%APPDATA%\knowledge\config.json`
-- Any OS: `$KNOWLEDGE_CONFIG` overrides both
+- Every OS: `~/.config/knowledge/config.json` (or `$XDG_CONFIG_HOME/knowledge/config.json`);
+  on Windows that is `%USERPROFILE%\.config\knowledge\`, never `%APPDATA%` (see INSTALL.md)
+- Any OS: `$KNOWLEDGE_CONFIG` overrides it
 
 ```json
 { "vault": "/home/me/knowledge", "devRoot": "/home/me/dev", "os": "linux",

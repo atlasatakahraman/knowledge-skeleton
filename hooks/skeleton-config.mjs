@@ -7,8 +7,10 @@
 //
 // Read from, in order:
 //   1. $KNOWLEDGE_CONFIG, if set (a temp HOME for an install test, a second vault)
-//   2. %APPDATA%\knowledge\config.json on Windows, $XDG_CONFIG_HOME/knowledge/config.json
-//      (default ~/.config/knowledge/config.json) elsewhere. Untracked, written by the installer.
+//   2. $XDG_CONFIG_HOME/knowledge/config.json (default ~/.config/knowledge/config.json), on every
+//      OS. Untracked, written by the installer. Not %APPDATA% on Windows: a packaged (MSIX) app such
+//      as Claude desktop has its %APPDATA% writes redirected into its own LocalCache, so a config
+//      written from inside it is invisible to a plain terminal, and the hooks failed there.
 //   3. brain-paths.mjs beside this file - the per-branch file this replaces; kept until every
 //      machine has a config.json.
 //
@@ -36,9 +38,10 @@ const IS_WINDOWS = process.platform === "win32";
 
 export const CONFIG_PATH =
   process.env.KNOWLEDGE_CONFIG ||
-  (IS_WINDOWS
-    ? join(process.env.APPDATA || join(homedir(), "AppData", "Roaming"), "knowledge", "config.json")
-    : join(process.env.XDG_CONFIG_HOME || join(homedir(), ".config"), "knowledge", "config.json"));
+  join(process.env.XDG_CONFIG_HOME || join(homedir(), ".config"), "knowledge", "config.json");
+
+/** Where Windows kept it before 2026-11-04; named in the error so an old machine is told to move it. */
+const OLD_WINDOWS_PATH = IS_WINDOWS && process.env.APPDATA ? join(process.env.APPDATA, "knowledge", "config.json") : "";
 
 /** `arch` / `windows` / the platform name: what records are stamped with when config names no OS. */
 const detectedOs = () => (IS_WINDOWS ? "windows" : process.platform === "linux" ? "arch" : process.platform);
@@ -58,6 +61,8 @@ async function load() {
     const { VAULT, DEV_ROOT } = await import(legacy);
     return { vault: VAULT, devRoot: DEV_ROOT, source: legacy };
   }
+  if (OLD_WINDOWS_PATH && existsSync(OLD_WINDOWS_PATH))
+    throw new Error(`knowledge config moved: move ${OLD_WINDOWS_PATH} to ${CONFIG_PATH} - see INSTALL.md`);
   throw new Error(`no knowledge config: write ${CONFIG_PATH} ({"vault": "...", "devRoot": "..."}) - see INSTALL.md`);
 }
 

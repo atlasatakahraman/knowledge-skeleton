@@ -109,9 +109,7 @@ line("ok", "prerequisites", `bun ${Bun.version} · ${Object.keys(PREREQS).join("
 // Mirrors CONFIG_PATH in hooks/skeleton-config.mjs, which cannot be imported before the file exists.
 const CONFIG_PATH =
   process.env.KNOWLEDGE_CONFIG ||
-  (WIN
-    ? join(process.env.APPDATA || join(homedir(), "AppData", "Roaming"), "knowledge", "config.json")
-    : join(process.env.XDG_CONFIG_HOME || join(homedir(), ".config"), "knowledge", "config.json"));
+  join(process.env.XDG_CONFIG_HOME || join(homedir(), ".config"), "knowledge", "config.json");
 const existing = readJson(CONFIG_PATH) ?? {};
 const VAULT = expand(opt("--vault") ?? existing.vault ?? "~/knowledge");
 const DEV = expand(opt("--dev") ?? existing.devRoot ?? "~/dev");
