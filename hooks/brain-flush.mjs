@@ -216,6 +216,16 @@ try {
     process.exit(0);
   }
 
+  // The prompt's rule is not enough: haiku still replies to the session now and then, and 10 of 147
+  // entries from 2026-09 to 2026-11 opened with chat ("Got it, you're through the Vercel setup").
+  // Every real entry opens with a bullet, a heading or a bold label. Same verdict as FLUSH_OK.
+  if (!/^(?:[-*] |#{1,6} |\*\*)/.test(out)) {
+    advance();
+    log({ hook: "flush", sid, outcome: "reply-dropped", events: rows.length, turns: fresh.length });
+    if (dry) process.stdout.write(`[dry-run] reply dropped, no note would be written: ${out.slice(0, 80)}\n`);
+    process.exit(0);
+  }
+
   // Filed on the day the work happened, not the day the flush ran. A session that worked 04:06-04:25
   // and ended at 05:26 had its tail flushed by SessionEnd into the NEXT day's note, and brain-doctor
   // saw 2026-10-04 as a day with captures and no note.
