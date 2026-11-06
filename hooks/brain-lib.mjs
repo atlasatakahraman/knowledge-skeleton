@@ -404,7 +404,11 @@ export function syncRecords() {
     }
 
     if (git("rev-parse", "--abbrev-ref", "@{u}").status !== 0) return { ...res, skipped: "no upstream" };
-    const f = git("fetch", "--quiet");
+    // ffPull's lock, not "records": a session-start pull fetching this checkout at the same moment
+    // moved origin/main under this fetch, and it failed "cannot lock ref" (2026-11-06). Busy retries
+    // at the next sync, since the commit above stays local until then.
+    const f = withLock(`pull-${basename(VAULT)}`, () => git("fetch", "--quiet"), 60_000);
+    if (!f) return { ...res, busy: true };
     if (f.status !== 0) return { ...res, failed: `fetch: ${why(f)}` };
     const unpushed = list("rev-list", "@{u}..HEAD");
     if (unpushed.some((h) => list("show", "--name-only", "--format=", h).some((p) => !isRecordPath(p)))) return { ...res, held: true };
