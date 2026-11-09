@@ -7,7 +7,8 @@
 
 # Hook-written records travel between the boots by syncRecords (brain-lib). Both boots append to
 # the same daily log, ledger and month indexes, so a rebase would conflict on every shared day; a
-# union merge keeps both sides' lines. Commit notes are one file each and never collide.
+# union merge keeps both sides' lines. Commit notes are one file each; they collide only when both
+# boots write a note for the same commit, which backfill can do while the vault has diverged.
 30-Sessions/**/*.md merge=union
 50-Ops/decisions.jsonl merge=union
 50-Ops/Commits/commits-*.md merge=union
