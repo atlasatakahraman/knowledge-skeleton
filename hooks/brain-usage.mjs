@@ -4,14 +4,15 @@
 //
 //   bun --bun brain-usage.mjs                    last 30 days, to stdout
 //   bun --bun brain-usage.mjs --days 7
-//   bun --bun brain-usage.mjs --month 2026-08    writes 50-Ops/Usage/usage-2026-08.md
+//   bun --bun brain-usage.mjs --month 2026-08    writes 50-Ops/Usage/usage-2026-08-<os>.md
 //   bun --bun brain-usage.mjs --blocks           rolling 5h windows (the Pro limit's shape)
 //   bun --bun brain-usage.mjs --projects         break down by project
 // brain-capture runs --month once per logical day.
 import { readdirSync, readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
 import { join, dirname, basename } from "node:path";
 import { homedir } from "node:os";
-import { VAULT, FOLDERS, ROLLOVER_HOUR } from "./brain-lib.mjs";
+import { execFileSync } from "node:child_process";
+import { VAULT, HOOKS, FOLDERS, ROLLOVER_HOUR, OS_TAG } from "./brain-lib.mjs";
 
 // USD per million tokens. VERIFY against current Anthropic pricing before trusting the cost
 // column - token counts are exact, these rates are not authoritative.
@@ -196,10 +197,15 @@ if (argv.includes("--blocks")) {
 
 const text = out.join("\n");
 if (month) {
-  const dest = join(VAULT, FOLDERS.ops, "Usage", `usage-${month}.md`);
+  // One file per boot: the digest is built from this machine's transcripts only, so a shared file
+  // would be overwritten by each boot in turn and mixed by the union merge when both had written.
+  const dest = join(VAULT, FOLDERS.ops, "Usage", `usage-${month}-${OS_TAG}.md`);
+  const created = !existsSync(dest);
   mkdirSync(dirname(dest), { recursive: true });
   const today = ymd(new Date());
   const header = `---\ntype: usage\nproject: brain\ntags: [usage, tokens, cost]\ncreated: ${today}\nupdated: ${today}\nstatus: active\n---\n\n`;
   writeFileSync(dest, `${header}${text}\n`, "utf8");
+  // A script write fires no reindex hook, so a new file would be an orphan until the hubs next run.
+  if (created) try { execFileSync(process.execPath, ["--bun", join(HOOKS, "brain-hubs.mjs")], { timeout: 60_000, stdio: "ignore", windowsHide: true }); } catch {}
   console.log(`wrote ${dest}`);
 } else console.log(text);

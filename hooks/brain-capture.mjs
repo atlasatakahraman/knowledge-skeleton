@@ -3,7 +3,7 @@
 import { statSync, openSync, readSync, closeSync } from "node:fs";
 import { join } from "node:path";
 import { spawn } from "node:child_process";
-import { guard, readStdin, logicalDate, HOOKS, VAULT, logEvent, readWatermarks, writeWatermark, resolveTranscript, FOLDERS } from "./brain-lib.mjs";
+import { guard, readStdin, logicalDate, HOOKS, VAULT, logEvent, readWatermarks, writeWatermark, resolveTranscript, FOLDERS, OS_TAG } from "./brain-lib.mjs";
 
 guard(); // MUST be first - without this, flush's own `claude -p` re-fires this hook.
 
@@ -92,7 +92,7 @@ try {
     const month = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
     let stale = true;
     try {
-      stale = day(statSync(join(VAULT, FOLDERS.ops, "Usage", `usage-${month}.md`)).mtimeMs) !== day(Date.now());
+      stale = day(statSync(join(VAULT, FOLDERS.ops, "Usage", `usage-${month}-${OS_TAG}.md`)).mtimeMs) !== day(Date.now());
     } catch {
       /* no digest yet - stale stays true */
     }

@@ -55,7 +55,7 @@ replaced it.
 - **Records** (daily notes, commit notes) are reached through a generated index (`00-MOC-Sessions`,
   `commits-YYYY-MM`) that is itself at most 2 hops from the root MOC. Never edit a generated index by
   hand; `brain-hubs` and `brain-commit` rewrite them.
-- **Generated month files** share one scheme: `commits-YYYY-MM`, `usage-YYYY-MM`, `health-YYYY-MM`.
+- **Generated month files** share one scheme: `commits-YYYY-MM`, `usage-YYYY-MM-<os>` (one per boot), `health-YYYY-MM`.
 
 ## Links
 
@@ -98,7 +98,7 @@ not failed.
 | Reusable knowledge | `20-Knowledge/<Category>/`: [[00-MOC-Knowledge]] |
 | Daily logs | `30-Sessions/YYYY/MM/YYYY-MM-DD.md`, split at the configured rollover hour |
 | Decisions | `60-Decisions/Repos/<Remote-Name>/` · `60-Decisions/Identity/`: [[00-MOC-Decisions]] |
-| Commit and usage records | `50-Ops/Commits/<YYYY-MM>/` + `commits-YYYY-MM.md` · `50-Ops/Usage/usage-YYYY-MM.md`: [[00-MOC-Ops]] |
+| Commit and usage records | `50-Ops/Commits/<YYYY-MM>/` + `commits-YYYY-MM.md` · `50-Ops/Usage/usage-YYYY-MM-<os>.md`: [[00-MOC-Ops]] |
 | Attachments | `80-Assets/Images/` · `80-Assets/Diagrams/`: Obsidian's `attachmentFolderPath` |
 | Repo brand assets | `80-Assets/Repos/<Remote-Name>/`: masters; the export ships in the repo |
 | Unsorted | `90-Inbox/`: empty it, don't let it become an archive |
