@@ -145,7 +145,9 @@ function writeIndex(month) {
     "project: knowledge",
     "tags: [commits, git, ops, index]",
     `created: ${month}-01`,
-    `updated: ${new Date().toISOString().slice(0, 10)}`,
+    // Fixed per month: this file merges by union across the boots, so a date that differs between
+    // them would be kept twice and leave duplicate frontmatter keys.
+    `updated: ${month}-01`,
     "status: active",
     "---",
     "",

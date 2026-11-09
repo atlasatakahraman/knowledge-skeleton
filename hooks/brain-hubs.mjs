@@ -11,7 +11,9 @@ import { VAULT, FOLDERS, ROLLOVER_HOUR } from "./brain-lib.mjs";
 const today = new Date().toISOString().slice(0, 10);
 /** A hub keeps the `created:` it was first written with; a new vault's hubs start today. */
 const createdOf = (file) => (existsSync(file) && /^created:\s*(\S+)/m.exec(readFileSync(file, "utf8"))?.[1]) || today;
-const fm = (tags, file) => ["---", "type: moc", "project: knowledge", `tags: [moc, ${tags}, generated]`, `created: ${createdOf(file)}`, `updated: ${today}`, "status: active", "---", ""];
+// `updated` follows `created`: hubs are rewritten on both boots and some merge by union, so a date
+// that differs between them would conflict or be kept twice.
+const fm = (tags, file) => ["---", "type: moc", "project: knowledge", `tags: [moc, ${tags}, generated]`, `created: ${createdOf(file)}`, `updated: ${createdOf(file)}`, "status: active", "---", ""];
 const md = (dir) => (existsSync(dir) ? readdirSync(dir).filter((f) => f.endsWith(".md") && !f.startsWith("00-MOC")) : []);
 const title = (p) => (/^# (.+)$/m.exec(readFileSync(p, "utf8"))?.[1] ?? basename(p, ".md")).replace(/[|\]]/g, "-");
 

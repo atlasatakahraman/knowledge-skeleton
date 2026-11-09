@@ -13,3 +13,4 @@
 50-Ops/Commits/commits-*.md merge=union
 50-Ops/Health/*.md merge=union
 50-Ops/Usage/*.md merge=union
+50-Ops/00-MOC-Ops.md merge=union
