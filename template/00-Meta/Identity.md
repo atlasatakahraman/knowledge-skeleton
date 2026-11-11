@@ -3,7 +3,7 @@ type: identity
 project: knowledge
 tags: [identity, owner]
 created: 2026-11-02
-updated: 2026-11-02
+updated: 2026-11-11
 status: draft
 ---
 
@@ -34,6 +34,13 @@ Every `FILL:` comment marks a placeholder. `grep -rn "FILL:" 00-Meta` lists what
 ## How to talk to me
 
 <!-- FILL: terse or detailed, code first or prose first, language, whether to explain code back. -->
+
+## My people
+
+The people I help have one folder each in [[00-MOC-People]]. **Check it before doing something
+for someone.** When I introduce someone new, add their folder.
+
+<!-- FILL: anything that applies to everyone you help (tone, language, privacy), or delete this line. -->
 
 ## Machine
 

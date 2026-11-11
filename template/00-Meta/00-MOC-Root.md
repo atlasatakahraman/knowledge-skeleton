@@ -3,7 +3,7 @@ type: moc
 project: knowledge
 tags: [moc, index]
 created: 2026-11-02
-updated: 2026-11-02
+updated: 2026-11-11
 status: active
 ---
 
@@ -29,6 +29,7 @@ in two hops, the vault has a gap: fix the gap, don't grep around it.
 
 - `10-Repos/`: [[00-MOC-Repos]] · one page per repository, each with a `checkout:` pointer
 - `20-Knowledge/`: [[00-MOC-Knowledge]] · reusable knowledge, one concept per note
+- `20-Knowledge/People/`: [[00-MOC-People]] · people the owner knows, one folder each; check it before doing something for someone
 - `30-Sessions/`: [[00-MOC-Sessions]] · daily logs (generated hub)
 - `40-Plans/`: [[00-MOC-Plans]] · every plan, one folder each, with its status (generated hub)
 - `50-Ops/`: [[00-MOC-Ops]] · commit notes, usage, health (generated hub)

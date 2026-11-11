@@ -3,7 +3,7 @@ type: rules
 project: knowledge
 tags: [conventions, frontmatter, naming, moc]
 created: 2026-11-02
-updated: 2026-11-02
+updated: 2026-11-11
 status: active
 ---
 
@@ -96,6 +96,7 @@ not failed.
 | Repo-specific docs | the repo's own `docs/`: it **is** the repo's wiki page |
 | Plans, all of them | `40-Plans/<YYYY-MM-DD>-<slug>/`: [[00-MOC-Plans]] |
 | Reusable knowledge | `20-Knowledge/<Category>/`: [[00-MOC-Knowledge]] |
+| People the owner knows | `20-Knowledge/People/<first-last>/<first-last>.md`, `type: person`, one folder each: [[00-MOC-People]] |
 | Daily logs | `30-Sessions/YYYY/MM/YYYY-MM-DD.md`, split at the configured rollover hour |
 | Decisions | `60-Decisions/Repos/<Remote-Name>/` · `60-Decisions/Identity/`: [[00-MOC-Decisions]] |
 | Commit and usage records | `50-Ops/Commits/<YYYY-MM>/` + `commits-YYYY-MM.md` · `50-Ops/Usage/usage-YYYY-MM-<os>.md`: [[00-MOC-Ops]] |
