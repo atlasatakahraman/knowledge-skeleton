@@ -210,13 +210,36 @@ function healthAlarm() {
     files = readdirSync(dir).filter((f) => /^health-\d{4}-\d{2}\.md$/.test(f)).sort();
   } catch {}
   if (!files.length) return null; // before the Routine's first run: nothing to say yet
-  const lines = readFileSync(join(dir, files.at(-1)), "utf8").split("\n").filter((l) => /^- \d{4}-\d{2}-\d{2} /.test(l));
+  // Sorted by "YYYY-MM-DD HH:MM", not file order: each boot appends its own lines and a pull merges
+  // them, so the file's last line is not always the newest record (11-06 landed after 11-10).
+  const lines = readFileSync(join(dir, files.at(-1)), "utf8")
+    .split("\n")
+    .filter((l) => /^- \d{4}-\d{2}-\d{2} /.test(l))
+    .sort((a, b) => a.slice(2, 18).localeCompare(b.slice(2, 18)));
   const last = lines.at(-1);
   if (!last) return null;
   const day = last.slice(2, 12);
-  const ageDays = Math.floor((Date.now() - Date.parse(`${day}T12:00:00`)) / 86_400_000);
-  if (ageDays >= 2)
-    return `!! VAULT HEALTH: the daily sweep has not recorded since ${day} (${ageDays}d). Is the Claude Desktop app running its vault-health Routine? Run it by hand: bun --bun ~/.claude/hooks/brain-doctor.mjs --repair --record --pretty`;
+  // Stale means "the vault was used on a whole day with no sweep", not "N days passed": the Routine
+  // only runs while its boot is up, so days spent on the other boot or powered off are not misses.
+  // A day counts as used when it has a session note; today is excluded because its sweep may not
+  // have run yet. Days are logical (05:00 rollover), matching the session notes.
+  const now = new Date(Date.now() - 5 * 3_600_000);
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+  const missed = [];
+  const walk = (p) => {
+    for (const e of readdirSync(p, { withFileTypes: true })) {
+      if (e.isDirectory()) walk(join(p, e.name));
+      else if (/^\d{4}-\d{2}-\d{2}\.md$/.test(e.name)) {
+        const d = e.name.slice(0, 10);
+        if (d > day && d < today) missed.push(d);
+      }
+    }
+  };
+  try {
+    walk(join(VAULT, FOLDERS.sessions));
+  } catch {}
+  if (missed.length)
+    return `!! VAULT HEALTH: no sweep recorded since ${day}, though the vault was used on ${missed.sort().join(", ")}. Was the Claude Desktop app's vault-health Routine able to run on that boot? Run it by hand: bun --bun ~/.claude/hooks/brain-doctor.mjs --repair --record --pretty`;
   if (last.includes("**FAIL**"))
     return `!! VAULT HEALTH FAIL (${day}): ${last.split("·")[1]?.trim()}. Details: bun --bun ~/.claude/hooks/brain-doctor.mjs --pretty — and any explanation the Routine wrote under that line in ${FOLDERS.ops}/Health/${files.at(-1)}.`;
   return null;
